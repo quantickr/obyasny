@@ -3,6 +3,7 @@ import re
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.topic import Topic, TopicKind, UserTopic
 
@@ -114,6 +115,7 @@ async def get_user_topics(
     stmt = (
         select(UserTopic)
         .where(UserTopic.user_id == user_id)
+        .options(selectinload(UserTopic.topic))
         .order_by(UserTopic.kind, UserTopic.id)
     )
     return list(await session.scalars(stmt))
