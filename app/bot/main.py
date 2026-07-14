@@ -1,7 +1,9 @@
 import asyncio
 import logging
+import socket
 
 from aiogram import Bot, Dispatcher
+from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.fsm.storage.redis import RedisStorage
 
 from app.bot.handlers import chat, misc, requests, search, start
@@ -11,6 +13,20 @@ from app.core.logging import setup_logging
 from app.core.redis_client import redis_client
 
 logger = logging.getLogger(__name__)
+
+
+def build_ipv4_session() -> AiohttpSession:
+    """Сессия бота, форсированная на IPv4.
+
+    Timeweb публикует IPv6-маршрут (DNS отдаёт AAAA для api.telegram.org),
+    но реально его не маршрутизирует: happy-eyeballs зависает на коннекте
+    по IPv6, и запросы к Telegram уходят в таймаут (TelegramNetworkError).
+    Добавляем family=AF_INET в параметры TCPConnector, чтобы ходить только
+    по IPv4.
+    """
+    session = AiohttpSession()
+    session._connector_init["family"] = socket.AF_INET
+    return session
 
 
 def build_dispatcher() -> Dispatcher:
@@ -37,7 +53,7 @@ async def main() -> None:
         logger.error("BOT_TOKEN не задан. Укажите токен от @BotFather в .env")
         return
 
-    bot = Bot(token=settings.bot_token)
+    bot = Bot(token=settings.bot_token, session=build_ipv4_session())
     dp = build_dispatcher()
 
     # Фоновая задача: доставка web-сообщений в Telegram через Redis Pub/Sub.
