@@ -22,15 +22,11 @@ services:
   nginx:
     image: nginx:1.27-alpine
     restart: always
-    # Прод-конфиг через envsubst (nginx entrypoint подставит ${DOMAIN}).
-    environment:
-      DOMAIN: ${DOMAIN}
     volumes:
-      # Гасим базовый bind-mount nginx.conf → default.conf:ro из docker-compose.yml
-      # (Compose объединяет volumes по спискам, а не по target — иначе envsubst
-      # не может записать сгенерированный конфиг в read-only default.conf).
-      - /dev/null:/etc/nginx/conf.d/default.conf:ro
-      - ./nginx/nginx.prod.conf.template:/etc/nginx/templates/default.conf.template:ro
+      # Статичный прод-конфиг (домен obyasny.ru подставлен внутри файла).
+      # Монтируем прямо в default.conf — тот же target перекрывает базовый
+      # mount из docker-compose.yml. envsubst не задействуется.
+      - ./nginx/nginx.prod.conf:/etc/nginx/conf.d/default.conf:ro
       - ./app/web/static:/static:ro
       - certbot_www:/var/www/certbot:ro
       - certbot_conf:/etc/letsencrypt:ro

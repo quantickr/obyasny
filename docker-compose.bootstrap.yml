@@ -5,9 +5,9 @@
 services:
   nginx:
     volumes:
-      # Гасим базовый bind-mount default.conf:ro (см. комментарий в prod-оверрайде).
-      - /dev/null:/etc/nginx/conf.d/default.conf:ro
-      - ./nginx/nginx.bootstrap.conf.template:/etc/nginx/templates/default.conf.template:ro
+      # Статичный bootstrap-конфиг (HTTP-only, без ssl_certificate).
+      # Монтируем прямо в default.conf — перекрывает и базовый mount, и prod.
+      - ./nginx/nginx.bootstrap.conf:/etc/nginx/conf.d/default.conf:ro
       - ./app/web/static:/static:ro
       - certbot_www:/var/www/certbot:ro
       - certbot_conf:/etc/letsencrypt:ro
