@@ -1,4 +1,5 @@
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import hash_password, verify_password
@@ -72,7 +73,16 @@ async def get_or_create_telegram_user(
         display_name=display_name.strip() or "Студент",
     )
     session.add(user)
-    await session.flush()
+    try:
+        await session.flush()
+    except IntegrityError:
+        # Гонка: параллельный /start уже создал этого пользователя между
+        # нашим SELECT и INSERT. Откатываем и читаем существующую запись.
+        await session.rollback()
+        existing = await get_by_telegram_id(session, telegram_id)
+        if existing is None:
+            raise
+        return existing
     return user
 
 
