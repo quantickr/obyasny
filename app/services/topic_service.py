@@ -1,6 +1,7 @@
 import re
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.topic import Topic, TopicKind, UserTopic
@@ -22,7 +23,16 @@ async def get_or_create_topic(
         return existing
     topic = Topic(name=name.strip(), slug=slug, category=category)
     session.add(topic)
-    await session.flush()
+    try:
+        await session.flush()
+    except IntegrityError:
+        # Гонка: параллельный запрос создал тему с тем же slug между
+        # нашим SELECT и INSERT. Откатываем и читаем существующую запись.
+        await session.rollback()
+        found = await session.scalar(select(Topic).where(Topic.slug == slug))
+        if found is None:
+            raise
+        return found
     return topic
 
 
@@ -50,19 +60,39 @@ async def set_user_topic(
     kind: TopicKind,
     level: int | None = None,
 ) -> UserTopic:
+    if level is not None:
+        level = min(max(level, 1), 10)
+    # Снимаем id заранее: после возможного rollback объект topic станет expired.
+    topic_id = topic.id
     existing = await session.scalar(
         select(UserTopic).where(
             UserTopic.user_id == user_id,
-            UserTopic.topic_id == topic.id,
+            UserTopic.topic_id == topic_id,
             UserTopic.kind == kind,
         )
     )
     if existing:
         existing.level = level
         return existing
-    ut = UserTopic(user_id=user_id, topic_id=topic.id, kind=kind, level=level)
+    ut = UserTopic(user_id=user_id, topic_id=topic_id, kind=kind, level=level)
     session.add(ut)
-    await session.flush()
+    try:
+        await session.flush()
+    except IntegrityError:
+        # Гонка: параллельный запрос уже добавил эту тему пользователю
+        # (нарушение uq_user_topic_kind). Откатываем и обновляем существующую.
+        await session.rollback()
+        found = await session.scalar(
+            select(UserTopic).where(
+                UserTopic.user_id == user_id,
+                UserTopic.topic_id == topic_id,
+                UserTopic.kind == kind,
+            )
+        )
+        if found is None:
+            raise
+        found.level = level
+        return found
     return ut
 
 

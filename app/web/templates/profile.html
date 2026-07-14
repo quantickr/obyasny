@@ -36,7 +36,7 @@
             <p class="text-sm font-medium text-green-700 mb-1">Могу объяснить</p>
             {% for ut in can_teach %}
             <div class="flex items-center justify-between text-sm py-1">
-                <span>{{ ut.topic.name }}{% if ut.level %} · ур. {{ ut.level }}{% endif %}</span>
+                <span>{{ ut.topic.name }}{% if ut.level %} · оценка {{ ut.level }}/10{% endif %}</span>
                 <form method="post" action="/profile/topics/{{ ut.id }}/remove">
                     <button class="text-red-400 hover:text-red-600">✕</button>
                 </form>
@@ -49,7 +49,7 @@
             <p class="text-sm font-medium text-sky-700 mb-1">Хочу узнать</p>
             {% for ut in wants_learn %}
             <div class="flex items-center justify-between text-sm py-1">
-                <span>{{ ut.topic.name }}</span>
+                <span>{{ ut.topic.name }}{% if ut.level %} · оценка {{ ut.level }}/10{% endif %}</span>
                 <form method="post" action="/profile/topics/{{ ut.id }}/remove">
                     <button class="text-red-400 hover:text-red-600">✕</button>
                 </form>
@@ -67,8 +67,9 @@
                     <option value="can_teach">Могу объяснить</option>
                     <option value="wants_learn">Хочу узнать</option>
                 </select>
-                <input type="number" name="level" min="1" max="5" placeholder="Ур."
-                       class="border border-slate-300 rounded-md px-2 py-2 text-sm w-20">
+                <input type="number" name="level" min="1" max="10" placeholder="Оценка"
+                       title="Оценка за сессию/предмет (1-10), необязательно"
+                       class="border border-slate-300 rounded-md px-2 py-2 text-sm w-24">
             </div>
             <button class="w-full bg-slate-700 text-white py-2 rounded-md hover:bg-slate-800 text-sm">Добавить</button>
         </form>

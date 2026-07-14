@@ -59,6 +59,8 @@ async def add_topic(
 ):
     topic = await topic_service.get_or_create_topic(session, topic_name)
     lvl = int(level) if level.isdigit() else None
+    if lvl is not None:
+        lvl = min(max(lvl, 1), 10)
     await topic_service.set_user_topic(
         session, user.id, topic, TopicKind(kind), lvl
     )

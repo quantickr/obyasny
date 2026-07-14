@@ -20,15 +20,20 @@ async def start_with_code(
     tg = message.from_user
     if user_id is not None:
         try:
-            await user_service.link_telegram(
+            _, merged = await user_service.link_or_merge_telegram(
                 session, user_id, tg.id, tg.username
             )
-            await message.answer(
-                "✅ Аккаунт привязан! Теперь бот и сайт работают вместе.",
-                reply_markup=main_menu(),
+            text = (
+                "✅ Аккаунты объединены! Твои темы и прогресс из бота "
+                "перенесены на сайт."
+                if merged
+                else "✅ Аккаунт привязан! Теперь бот и сайт работают вместе."
             )
+            await message.answer(text, reply_markup=main_menu())
             return
         except user_service.AuthError as e:
+            # Откатываем полусостояние, иначе middleware закоммитит его.
+            await session.rollback()
             await message.answer(f"⚠️ {e}")
 
     # Код невалиден/просрочен — обычный старт.

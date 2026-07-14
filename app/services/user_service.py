@@ -86,23 +86,51 @@ async def get_or_create_telegram_user(
     return user
 
 
-async def link_telegram(
+async def link_or_merge_telegram(
     session: AsyncSession,
     user_id: int,
     telegram_id: int,
     telegram_username: str | None,
-) -> User:
-    """Привязка Telegram к существующему веб-аккаунту (через код линковки)."""
+) -> tuple[User, bool]:
+    """Привязка Telegram к веб-аккаунту (через код линковки).
+
+    Если telegram_id уже принадлежит отдельному «пустому» бот-аккаунту
+    (только telegram_id, без email/пароля) — сливаем его данные в текущий
+    аккаунт и удаляем бот-аккаунт. Если он привязан к полноценному аккаунту
+    с почтой — отказ.
+
+    Возвращает (пользователь, было_ли_слияние).
+    """
+    from app.services import merge_service
+
     user = await session.get(User, user_id)
     if not user:
         raise AuthError("Аккаунт не найден")
-    # Если этот telegram_id уже привязан к другому пользователю — конфликт.
+
+    # Идемпотентность: уже привязан этот же Telegram.
+    if user.telegram_id == telegram_id:
+        return user, False
+    # У аккаунта уже есть ДРУГОЙ Telegram.
+    if user.telegram_id is not None and user.telegram_id != telegram_id:
+        raise AuthError("К этому аккаунту уже привязан другой Telegram")
+
     other = await get_by_telegram_id(session, telegram_id)
-    if other and other.id != user.id:
-        raise AuthError("Этот Telegram уже привязан к другому аккаунту")
-    user.telegram_id = telegram_id
-    user.telegram_username = telegram_username
-    return user
+    if other is None:
+        # Простая привязка — telegram_id свободен.
+        user.telegram_id = telegram_id
+        user.telegram_username = telegram_username
+        return user, False
+    if other.id == user.id:
+        return user, False
+
+    # telegram_id принадлежит другому аккаунту.
+    if other.email or other.password_hash:
+        raise AuthError("Этот Telegram привязан к отдельному аккаунту с почтой")
+
+    # other — чисто бот-аккаунт: сливаем его данные в текущий и удаляем.
+    await merge_service.merge_user_into(session, src_id=other.id, dst_id=user.id)
+    await session.refresh(user)
+    return user, True
 
 
 async def update_profile(
