@@ -1,0 +1,52 @@
+# Прод-override к docker-compose.yml.
+# Запуск:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+services:
+  db:
+    restart: always
+    # Порт наружу НЕ публикуем — доступ только из compose-сети.
+    ports: []
+
+  redis:
+    restart: always
+
+  migrate:
+    restart: "no"
+
+  web:
+    restart: always
+
+  bot:
+    restart: always
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: always
+    # Прод-конфиг через envsubst (nginx entrypoint подставит ${DOMAIN}).
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./nginx/nginx.prod.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./app/web/static:/static:ro
+      - certbot_www:/var/www/certbot:ro
+      - certbot_conf:/etc/letsencrypt:ro
+    ports:
+      - "80:80"
+      - "443:443"
+
+  # Разовый/повторяемый выпуск и продление TLS-сертификата.
+  # Первый выпуск:
+  #   docker compose -f docker-compose.yml -f docker-compose.prod.yml run --rm certbot \
+  #     certonly --webroot -w /var/www/certbot -d $DOMAIN --email you@example.com --agree-tos --no-eff-email
+  # Продление (по cron): docker compose ... run --rm certbot renew && docker compose ... exec nginx nginx -s reload
+  certbot:
+    image: certbot/certbot:latest
+    volumes:
+      - certbot_www:/var/www/certbot
+      - certbot_conf:/etc/letsencrypt
+    entrypoint: ""
+    command: ["true"]
+
+volumes:
+  certbot_www:
+  certbot_conf:

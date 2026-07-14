@@ -1,0 +1,119 @@
+import time
+
+from fastapi import APIRouter, Form, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
+
+from app.core.config import settings
+from app.core.security import create_session_token, verify_telegram_login
+from app.services import user_service
+from app.services.user_service import AuthError
+from app.web.dependencies import SESSION_COOKIE, CurrentUserOptional, SessionDep
+from app.web.templating import templates
+
+router = APIRouter()
+
+_COOKIE_MAX_AGE = settings.session_ttl_hours * 3600
+
+
+def _set_session(response: RedirectResponse, user_id: int) -> None:
+    token = create_session_token(user_id)
+    response.set_cookie(
+        SESSION_COOKIE,
+        token,
+        max_age=_COOKIE_MAX_AGE,
+        httponly=True,
+        samesite="lax",
+    )
+
+
+@router.get("/", response_class=HTMLResponse)
+async def index(request: Request, user: CurrentUserOptional):
+    if user:
+        return RedirectResponse(url="/profile", status_code=303)
+    return templates.TemplateResponse(request, "index.html", {"user": None})
+
+
+@router.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    return templates.TemplateResponse(
+        request, "auth/login.html", {"user": None, "error": None}
+    )
+
+
+@router.post("/login")
+async def login_submit(
+    request: Request,
+    session: SessionDep,
+    email: str = Form(...),
+    password: str = Form(...),
+):
+    try:
+        user = await user_service.authenticate_email(session, email, password)
+    except AuthError as e:
+        return templates.TemplateResponse(
+            request, "auth/login.html", {"user": None, "error": str(e)}
+        )
+    response = RedirectResponse(url="/profile", status_code=303)
+    _set_session(response, user.id)
+    return response
+
+
+@router.get("/register", response_class=HTMLResponse)
+async def register_page(request: Request):
+    return templates.TemplateResponse(
+        request, "auth/register.html", {"user": None, "error": None}
+    )
+
+
+@router.post("/register")
+async def register_submit(
+    request: Request,
+    session: SessionDep,
+    email: str = Form(...),
+    password: str = Form(...),
+    display_name: str = Form(...),
+):
+    try:
+        user = await user_service.register_email(
+            session, email, password, display_name
+        )
+        await session.commit()
+    except AuthError as e:
+        return templates.TemplateResponse(
+            request, "auth/register.html", {"user": None, "error": str(e)}
+        )
+    response = RedirectResponse(url="/profile", status_code=303)
+    _set_session(response, user.id)
+    return response
+
+
+@router.get("/auth/telegram")
+async def telegram_callback(request: Request, session: SessionDep):
+    """Callback от Telegram Login Widget: проверяем подпись и логиним."""
+    data = dict(request.query_params)
+    if not verify_telegram_login(data):
+        return RedirectResponse(url="/login?error=tg", status_code=303)
+
+    # Защита от старых данных (auth_date не старше суток)
+    auth_date = int(data.get("auth_date", "0"))
+    if time.time() - auth_date > 86400:
+        return RedirectResponse(url="/login?error=expired", status_code=303)
+
+    tg_id = int(data["id"])
+    username = data.get("username")
+    display_name = data.get("first_name") or username or "Студент"
+    user = await user_service.get_or_create_telegram_user(
+        session, tg_id, username, display_name
+    )
+    await session.commit()
+
+    response = RedirectResponse(url="/profile", status_code=303)
+    _set_session(response, user.id)
+    return response
+
+
+@router.get("/logout")
+async def logout():
+    response = RedirectResponse(url="/login", status_code=303)
+    response.delete_cookie(SESSION_COOKIE)
+    return response

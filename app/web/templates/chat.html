@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Чат — Объясни!{% endblock %}
+{% block content %}
+<div class="bg-white rounded-xl border border-slate-200 flex flex-col h-[70vh]">
+    <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+        <div>
+            <p class="font-semibold">{{ partner.display_name if partner else 'Собеседник' }}</p>
+            {% if partner and partner.show_tg_username and partner.telegram_username %}
+            <a href="https://t.me/{{ partner.telegram_username }}" class="text-xs text-sky-600">@{{ partner.telegram_username }}</a>
+            {% endif %}
+        </div>
+    </div>
+    <div id="messages" class="flex-1 overflow-y-auto p-4 space-y-2">
+        {% for m in messages %}
+        <div class="flex {% if m.sender_id == user.id %}justify-end{% endif %}">
+            <div class="{% if m.sender_id == user.id %}bg-indigo-600 text-white{% else %}bg-slate-100{% endif %} px-3 py-2 rounded-lg max-w-[70%] text-sm">
+                {{ m.body }}
+                <span class="text-[10px] opacity-60 ml-1">{{ 'TG' if m.source.value == 'telegram' else '' }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    <form id="chat-form" class="p-3 border-t border-slate-200 flex gap-2">
+        <input id="chat-input" type="text" placeholder="Сообщение..." autocomplete="off"
+               class="flex-1 border border-slate-300 rounded-md px-3 py-2">
+        <button class="bg-indigo-600 text-white px-5 rounded-md hover:bg-indigo-700">→</button>
+    </form>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+    const chatId = {{ chat.id }};
+    const myId = {{ user.id }};
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    const ws = new WebSocket(`${proto}://${location.host}/ws/chat/${chatId}`);
+    const box = document.getElementById('messages');
+    const input = document.getElementById('chat-input');
+
+    function addMessage(body, mine, src) {
+        const wrap = document.createElement('div');
+        wrap.className = 'flex ' + (mine ? 'justify-end' : '');
+        const bubble = document.createElement('div');
+        bubble.className = (mine ? 'bg-indigo-600 text-white' : 'bg-slate-100') +
+            ' px-3 py-2 rounded-lg max-w-[70%] text-sm';
+        bubble.textContent = body + (src === 'telegram' ? ' (TG)' : '');
+        wrap.appendChild(bubble);
+        box.appendChild(wrap);
+        box.scrollTop = box.scrollHeight;
+    }
+
+    ws.onmessage = (e) => {
+        const ev = JSON.parse(e.data);
+        addMessage(ev.body, ev.sender_id === myId, ev.source);
+    };
+
+    document.getElementById('chat-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const body = input.value.trim();
+        if (!body) return;
+        ws.send(JSON.stringify({ body }));
+        input.value = '';
+    });
+
+    box.scrollTop = box.scrollHeight;
+</script>
+{% endblock %}

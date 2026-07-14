@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Регистрация — Объясни!{% endblock %}
+{% block content %}
+<div class="max-w-sm mx-auto bg-white p-7 rounded-2xl border border-brand-100 shadow-soft">
+    <div class="text-center mb-5">
+        <div class="text-4xl mb-2">🎓</div>
+        <h1 class="text-2xl font-extrabold">Присоединяйся</h1>
+        <p class="text-sm text-slate-500">Создай аккаунт в «Объясни!»</p>
+    </div>
+    {% if error %}
+    <div class="bg-red-50 text-red-700 text-sm p-3 rounded-lg mb-3">{{ error }}</div>
+    {% endif %}
+    <form method="post" action="/register" class="space-y-3">
+        <input type="text" name="display_name" placeholder="Имя" required
+               class="w-full border border-brand-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent">
+        <input type="email" name="email" placeholder="Email" required
+               class="w-full border border-brand-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent">
+        <input type="password" name="password" placeholder="Пароль" required minlength="6"
+               class="w-full border border-brand-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent">
+        <button class="w-full brand-gradient text-white py-2.5 rounded-lg font-bold hover:opacity-90 transition-opacity shadow-soft">Создать аккаунт</button>
+    </form>
+    <p class="text-sm text-slate-500 mt-5 text-center">
+        Уже есть аккаунт? <a href="/login" class="text-brand-600 font-semibold hover:underline">Войти</a>
+    </p>
+</div>
+{% endblock %}

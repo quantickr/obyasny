@@ -1,0 +1,89 @@
+import re
+
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.topic import Topic, TopicKind, UserTopic
+
+
+def slugify(name: str) -> str:
+    s = name.strip().lower()
+    s = re.sub(r"[^\w\s-]", "", s, flags=re.UNICODE)
+    s = re.sub(r"[\s_-]+", "-", s)
+    return s.strip("-") or "topic"
+
+
+async def get_or_create_topic(
+    session: AsyncSession, name: str, category: str | None = None
+) -> Topic:
+    slug = slugify(name)
+    existing = await session.scalar(select(Topic).where(Topic.slug == slug))
+    if existing:
+        return existing
+    topic = Topic(name=name.strip(), slug=slug, category=category)
+    session.add(topic)
+    await session.flush()
+    return topic
+
+
+async def search_topics(
+    session: AsyncSession, query: str, limit: int = 10
+) -> list[Topic]:
+    """Нечёткий поиск тем по имени (ILIKE; при наличии pg_trgm — ранжирование)."""
+    q = query.strip()
+    if not q:
+        return []
+    pattern = f"%{q}%"
+    stmt = (
+        select(Topic)
+        .where(Topic.name.ilike(pattern))
+        .order_by(func.length(Topic.name))
+        .limit(limit)
+    )
+    return list(await session.scalars(stmt))
+
+
+async def set_user_topic(
+    session: AsyncSession,
+    user_id: int,
+    topic: Topic,
+    kind: TopicKind,
+    level: int | None = None,
+) -> UserTopic:
+    existing = await session.scalar(
+        select(UserTopic).where(
+            UserTopic.user_id == user_id,
+            UserTopic.topic_id == topic.id,
+            UserTopic.kind == kind,
+        )
+    )
+    if existing:
+        existing.level = level
+        return existing
+    ut = UserTopic(user_id=user_id, topic_id=topic.id, kind=kind, level=level)
+    session.add(ut)
+    await session.flush()
+    return ut
+
+
+async def remove_user_topic(
+    session: AsyncSession, user_id: int, user_topic_id: int
+) -> None:
+    ut = await session.scalar(
+        select(UserTopic).where(
+            UserTopic.id == user_topic_id, UserTopic.user_id == user_id
+        )
+    )
+    if ut:
+        await session.delete(ut)
+
+
+async def get_user_topics(
+    session: AsyncSession, user_id: int
+) -> list[UserTopic]:
+    stmt = (
+        select(UserTopic)
+        .where(UserTopic.user_id == user_id)
+        .order_by(UserTopic.kind, UserTopic.id)
+    )
+    return list(await session.scalars(stmt))

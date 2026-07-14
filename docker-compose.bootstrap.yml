@@ -1,0 +1,13 @@
+# Override для ПЕРВИЧНОГО выпуска TLS-сертификата.
+# Подключается поверх prod-конфига ТОЛЬКО на время первого certbot certonly:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.bootstrap.yml up -d nginx
+# nginx поднимается лишь на HTTP (без ssl_certificate), чтобы прошёл ACME-challenge.
+services:
+  nginx:
+    volumes:
+      - ./nginx/nginx.bootstrap.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./app/web/static:/static:ro
+      - certbot_www:/var/www/certbot:ro
+      - certbot_conf:/etc/letsencrypt:ro
+    ports:
+      - "80:80"

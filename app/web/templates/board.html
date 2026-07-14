@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Доска — Объясни!{% endblock %}
+{% block content %}
+<h1 class="text-xl font-bold mb-4">Доска объявлений</h1>
+
+<div class="bg-white p-4 rounded-xl border border-slate-200 mb-6">
+    <h2 class="font-semibold mb-2">Новое объявление</h2>
+    <form method="post" action="/board/create" class="space-y-2">
+        <div class="grid md:grid-cols-2 gap-2">
+            <input type="text" name="teach_topic" placeholder="Умею объяснить..."
+                   class="border border-slate-300 rounded-md px-3 py-2 text-sm">
+            <input type="text" name="learn_topic" placeholder="Хочу узнать..."
+                   class="border border-slate-300 rounded-md px-3 py-2 text-sm">
+        </div>
+        <textarea name="description" rows="2" placeholder="Комментарий"
+                  class="w-full border border-slate-300 rounded-md px-3 py-2 text-sm"></textarea>
+        <button class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 text-sm">Опубликовать</button>
+    </form>
+</div>
+
+<div class="space-y-3">
+    {% for l in listings %}
+    <div class="bg-white p-4 rounded-xl border border-slate-200">
+        <div class="flex items-center gap-2 text-sm mb-1">
+            {% if l.teach_topic_id %}<span class="bg-green-100 text-green-700 px-2 py-0.5 rounded">учит: {{ topics[l.teach_topic_id].name if topics.get(l.teach_topic_id) else l.teach_topic_id }}</span>{% endif %}
+            {% if l.learn_topic_id %}<span class="bg-sky-100 text-sky-700 px-2 py-0.5 rounded">хочет: {{ topics[l.learn_topic_id].name if topics.get(l.learn_topic_id) else l.learn_topic_id }}</span>{% endif %}
+        </div>
+        {% if l.description %}<p class="text-sm text-slate-600 mb-2">{{ l.description }}</p>{% endif %}
+        {% if l.author_id != user.id %}
+        <form method="post" action="/board/{{ l.id }}/respond" class="flex gap-2">
+            <input type="text" name="message" placeholder="Ваш отклик"
+                   class="flex-1 border border-slate-300 rounded-md px-3 py-1.5 text-sm">
+            <button class="bg-green-600 text-white px-4 rounded-md hover:bg-green-700 text-sm">Откликнуться</button>
+        </form>
+        {% else %}
+        <p class="text-xs text-slate-400">Ваше объявление</p>
+        {% endif %}
+    </div>
+    {% else %}
+    <p class="text-sm text-slate-400">Пока нет объявлений</p>
+    {% endfor %}
+</div>
+{% endblock %}

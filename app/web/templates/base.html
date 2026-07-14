@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Объясни! — студенты объясняют студентам{% endblock %}</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎓</text></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Nunito', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                    },
+                    colors: {
+                        // Фирменная «шоколадно-янтарная» палитра «Объясни!»
+                        brand: {
+                            50:  '#fdf6ee',
+                            100: '#fae9d5',
+                            200: '#f4d0aa',
+                            300: '#ecb075',
+                            400: '#e48c45',
+                            500: '#dd7024',
+                            600: '#c8571a',
+                            700: '#a64118',
+                            800: '#86351b',
+                            900: '#6d2d19',
+                        },
+                    },
+                    boxShadow: {
+                        soft: '0 10px 30px -12px rgba(134, 53, 27, 0.25)',
+                    },
+                    keyframes: {
+                        floaty: {
+                            '0%,100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-8px)' },
+                        },
+                    },
+                    animation: {
+                        floaty: 'floaty 4s ease-in-out infinite',
+                    },
+                },
+            },
+        };
+    </script>
+    <style>
+        .brand-gradient {
+            background-image: linear-gradient(135deg, #dd7024 0%, #e48c45 45%, #f4b942 100%);
+        }
+        .brand-text-gradient {
+            background-image: linear-gradient(135deg, #c8571a 0%, #dd7024 50%, #e0a020 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+    </style>
+</head>
+<body class="bg-brand-50/60 text-slate-800 min-h-screen flex flex-col antialiased">
+    <header class="sticky top-0 z-30 bg-white/80 backdrop-blur border-b border-brand-100">
+        <nav class="max-w-5xl mx-auto px-4 py-3 flex items-center gap-5 text-sm font-semibold">
+            <a href="/" class="flex items-center gap-2 text-lg font-extrabold">
+                <span class="text-2xl">🎓</span>
+                <span class="brand-text-gradient">Объясни!</span>
+            </a>
+            {% if user %}
+            <a href="/search" class="text-slate-600 hover:text-brand-600 transition-colors">Поиск</a>
+            <a href="/board" class="text-slate-600 hover:text-brand-600 transition-colors">Доска</a>
+            <a href="/matches" class="text-slate-600 hover:text-brand-600 transition-colors">Пары</a>
+            <a href="/requests" class="text-slate-600 hover:text-brand-600 transition-colors">Заявки</a>
+            <a href="/chats" class="text-slate-600 hover:text-brand-600 transition-colors">Чаты</a>
+            <div class="ml-auto flex items-center gap-3">
+                <a href="/profile" class="flex items-center gap-2 text-slate-700 hover:text-brand-600 transition-colors">
+                    <span class="w-7 h-7 rounded-full brand-gradient text-white grid place-items-center text-xs font-bold">
+                        {{ user.display_name[:1] | upper }}
+                    </span>
+                    <span class="hidden sm:inline">{{ user.display_name }}</span>
+                </a>
+                <a href="/logout" class="text-slate-400 hover:text-red-500 transition-colors">Выйти</a>
+            </div>
+            {% else %}
+            <div class="ml-auto flex items-center gap-3">
+                <a href="/login" class="text-slate-600 hover:text-brand-600 transition-colors">Войти</a>
+                <a href="/register" class="brand-gradient text-white px-4 py-2 rounded-full shadow-soft hover:opacity-90 transition-opacity">Регистрация</a>
+            </div>
+            {% endif %}
+        </nav>
+    </header>
+    <main class="max-w-5xl mx-auto px-4 py-8 w-full flex-1">
+        {% block content %}{% endblock %}
+    </main>
+    <footer class="border-t border-brand-100 mt-8">
+        <div class="max-w-5xl mx-auto px-4 py-6 text-center text-xs text-slate-400">
+            <span class="brand-text-gradient font-bold">Объясни!</span> — студенты объясняют студентам 🎓🍫
+        </div>
+    </footer>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

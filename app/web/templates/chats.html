@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Чаты — Объясни!{% endblock %}
+{% block content %}
+<h1 class="text-xl font-bold mb-4">Чаты</h1>
+<div class="space-y-2">
+    {% for chat in chats %}
+    <a href="/chat/{{ chat.id }}" class="block bg-white p-4 rounded-xl border border-slate-200 hover:border-indigo-300">
+        <p class="font-medium">{{ partners[chat.id].display_name if partners.get(chat.id) else 'Собеседник' }}</p>
+        <p class="text-xs text-slate-400">{{ chat.context_type.value if chat.context_type else 'чат' }}</p>
+    </a>
+    {% else %}
+    <p class="text-sm text-slate-400">Пока нет чатов. Найдите кого-нибудь через поиск или подбор пар.</p>
+    {% endfor %}
+</div>
+{% endblock %}

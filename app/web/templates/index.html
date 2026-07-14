@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- Hero -->
+<section class="relative overflow-hidden rounded-3xl brand-gradient text-white px-6 py-16 sm:py-20 text-center shadow-soft">
+    <div class="absolute -top-8 -left-8 text-8xl opacity-20 select-none animate-floaty">🍫</div>
+    <div class="absolute -bottom-10 -right-6 text-8xl opacity-20 select-none animate-floaty" style="animation-delay:1s">🎓</div>
+    <div class="relative">
+        <span class="inline-block bg-white/20 backdrop-blur px-4 py-1.5 rounded-full text-sm font-semibold mb-5">
+            Студенты объясняют студентам
+        </span>
+        <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight mb-4">
+            Найди, кто объяснит тему
+        </h1>
+        <p class="text-lg text-white/90 max-w-xl mx-auto mb-8">
+            Не понял тему? <b>«Объясни!»</b> найдёт того, кто разложит по полочкам.
+            Взамен объясни свою тему или отблагодари шоколадками 🍫.
+            Работает на сайте и в Telegram.
+        </p>
+        <div class="flex flex-wrap gap-3 justify-center">
+            <a href="/register" class="bg-white text-brand-700 px-7 py-3 rounded-full font-bold hover:bg-brand-50 transition-colors shadow-lg">
+                Начать бесплатно
+            </a>
+            <a href="https://t.me/{{ bot_username }}" class="bg-white/15 border border-white/40 backdrop-blur px-7 py-3 rounded-full font-bold hover:bg-white/25 transition-colors">
+                Открыть в Telegram
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- Как это работает -->
+<section class="mt-14">
+    <h2 class="text-center text-2xl font-extrabold mb-8">
+        Три способа найти <span class="brand-text-gradient">того, кто объяснит</span>
+    </h2>
+    <div class="grid md:grid-cols-3 gap-6">
+        <div class="group bg-white p-6 rounded-2xl border border-brand-100 hover:shadow-soft hover:-translate-y-1 transition-all">
+            <div class="w-12 h-12 rounded-xl bg-brand-100 text-2xl grid place-items-center mb-4 group-hover:scale-110 transition-transform">🔍</div>
+            <h3 class="font-bold text-lg mb-1">Поиск + заявки</h3>
+            <p class="text-sm text-slate-600">Найди по теме того, кто объяснит, и отправь заявку на помощь.</p>
+        </div>
+        <div class="group bg-white p-6 rounded-2xl border border-brand-100 hover:shadow-soft hover:-translate-y-1 transition-all">
+            <div class="w-12 h-12 rounded-xl bg-brand-100 text-2xl grid place-items-center mb-4 group-hover:scale-110 transition-transform">📋</div>
+            <h3 class="font-bold text-lg mb-1">Доска объявлений</h3>
+            <p class="text-sm text-slate-600">«Умею объяснить X, хочу узнать Y» — публикуй и откликайся на других.</p>
+        </div>
+        <div class="group bg-white p-6 rounded-2xl border border-brand-100 hover:shadow-soft hover:-translate-y-1 transition-all">
+            <div class="w-12 h-12 rounded-xl bg-brand-100 text-2xl grid place-items-center mb-4 group-hover:scale-110 transition-transform">🤝</div>
+            <h3 class="font-bold text-lg mb-1">Авто-подбор пары</h3>
+            <p class="text-sm text-slate-600">Система сама найдёт взаимовыгодные пары: ты — мне, я — тебе.</p>
+        </div>
+    </div>
+</section>
+
+<!-- Шоколадки -->
+<section class="mt-12 bg-white rounded-2xl border border-brand-100 p-8 flex flex-col sm:flex-row items-center gap-6">
+    <div class="text-6xl animate-floaty">🍫</div>
+    <div>
+        <h3 class="font-extrabold text-xl mb-1">Шоколадки — валюта благодарности</h3>
+        <p class="text-slate-600 text-sm">
+            Нечем ответить взаимной темой? Скажи «спасибо» шоколадкой.
+            Копи их за помощь другим и трать, когда нужна помощь тебе.
+        </p>
+    </div>
+</section>
+
+{% endblock %}

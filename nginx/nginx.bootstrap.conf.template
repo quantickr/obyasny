@@ -1,0 +1,17 @@
+# Bootstrap-конфиг nginx: только HTTP.
+# Нужен для ПЕРВИЧНОГО выпуска TLS-сертификата Certbot'ом (ACME webroot),
+# пока сертификата ещё нет и полный prod-конфиг с ssl_certificate не может стартовать.
+# После выпуска сертификата переключаемся на nginx.prod.conf.template.
+server {
+    listen 80;
+    server_name ${DOMAIN};
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 200 'Объясни!: ожидание выпуска TLS-сертификата\n';
+        add_header Content-Type text/plain;
+    }
+}

@@ -1,0 +1,55 @@
+import asyncio
+import logging
+
+from aiogram import Bot, Dispatcher
+from aiogram.fsm.storage.redis import RedisStorage
+
+from app.bot.handlers import chat, misc, requests, search, start
+from app.bot.middlewares import DbSessionMiddleware
+from app.core.config import settings
+from app.core.logging import setup_logging
+from app.core.redis_client import redis_client
+
+logger = logging.getLogger(__name__)
+
+
+def build_dispatcher() -> Dispatcher:
+    # FSM-состояния храним в Redis, чтобы переживать рестарты бота.
+    storage = RedisStorage(redis=redis_client)
+    dp = Dispatcher(storage=storage)
+
+    session_mw = DbSessionMiddleware()
+    dp.message.middleware(session_mw)
+    dp.callback_query.middleware(session_mw)
+
+    # Порядок важен: специфичные состояния (chat) раньше общих меню.
+    dp.include_router(start.router)
+    dp.include_router(chat.router)
+    dp.include_router(requests.router)
+    dp.include_router(search.router)
+    dp.include_router(misc.router)
+    return dp
+
+
+async def main() -> None:
+    setup_logging()
+    if not settings.bot_token or settings.bot_token.startswith("123456:"):
+        logger.error("BOT_TOKEN не задан. Укажите токен от @BotFather в .env")
+        return
+
+    bot = Bot(token=settings.bot_token)
+    dp = build_dispatcher()
+
+    # Фоновая задача: доставка web-сообщений в Telegram через Redis Pub/Sub.
+    relay_task = asyncio.create_task(chat.chat_relay_subscriber(bot))
+
+    logger.info("Бот запускается (long polling)...")
+    try:
+        await dp.start_polling(bot)
+    finally:
+        relay_task.cancel()
+        await bot.session.close()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Поиск — Объясни!{% endblock %}
+{% block content %}
+<h1 class="text-xl font-bold mb-4">Кто объяснит тему?</h1>
+<form method="get" action="/search" class="flex gap-2 mb-6">
+    <input type="text" name="q" value="{{ q }}" placeholder="Например: производные, SQL JOIN"
+           class="flex-1 border border-slate-300 rounded-md px-3 py-2">
+    <button class="bg-indigo-600 text-white px-5 rounded-md hover:bg-indigo-700">Найти</button>
+</form>
+
+{% if q and not results %}
+<p class="text-slate-500">Никого не нашлось по запросу «{{ q }}».</p>
+{% endif %}
+
+<div class="space-y-3">
+    {% for teacher, topic in results %}
+    <div class="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between">
+        <div>
+            <p class="font-medium">{{ teacher.display_name }}</p>
+            <p class="text-sm text-slate-500">Объяснит: {{ topic.name }}</p>
+            {% if teacher.show_tg_username and teacher.telegram_username %}
+            <p class="text-xs text-sky-600">@{{ teacher.telegram_username }}</p>
+            {% endif %}
+        </div>
+        <form method="post" action="/search/request" class="flex items-center gap-2">
+            <input type="hidden" name="receiver_id" value="{{ teacher.id }}">
+            <input type="hidden" name="topic_id" value="{{ topic.id }}">
+            <select name="offer_type" class="border border-slate-300 rounded-md px-2 py-1.5 text-sm">
+                <option value="chocolates">🍫 Шоколадки</option>
+                <option value="exchange">🔄 Обмен темой</option>
+            </select>
+            <button class="bg-green-600 text-white px-4 py-1.5 rounded-md hover:bg-green-700 text-sm">Заявка</button>
+        </form>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

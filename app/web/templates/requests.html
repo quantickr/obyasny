@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Заявки — Объясни!{% endblock %}
+{% block content %}
+<h1 class="text-xl font-bold mb-4">Заявки</h1>
+
+<h2 class="font-semibold text-slate-600 mb-2">Входящие</h2>
+<div class="space-y-2 mb-6">
+    {% for req in incoming %}
+    <div class="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between">
+        <div>
+            <p class="text-sm">Просят объяснить тему <b>#{{ req.topic_id }}</b></p>
+            {% if req.message %}<p class="text-sm text-slate-500">{{ req.message }}</p>{% endif %}
+            <p class="text-xs text-slate-400">Взамен: {{ 'шоколадки' if req.offer_type.value == 'chocolates' else 'обмен темой' }}</p>
+        </div>
+        <div class="flex gap-2">
+            <form method="post" action="/requests/{{ req.id }}/accept">
+                <button class="bg-green-600 text-white px-3 py-1.5 rounded-md text-sm hover:bg-green-700">Принять</button>
+            </form>
+            <form method="post" action="/requests/{{ req.id }}/decline">
+                <button class="bg-slate-200 px-3 py-1.5 rounded-md text-sm hover:bg-slate-300">Отклонить</button>
+            </form>
+        </div>
+    </div>
+    {% else %}
+    <p class="text-sm text-slate-400">Нет входящих заявок</p>
+    {% endfor %}
+</div>
+
+<h2 class="font-semibold text-slate-600 mb-2">Исходящие</h2>
+<div class="space-y-2">
+    {% for req in outgoing %}
+    <div class="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between">
+        <p class="text-sm">Тема <b>#{{ req.topic_id }}</b></p>
+        <span class="text-xs px-2 py-1 rounded
+            {% if req.status.value == 'accepted' %}bg-green-100 text-green-700
+            {% elif req.status.value == 'declined' %}bg-red-100 text-red-700
+            {% else %}bg-slate-100 text-slate-600{% endif %}">
+            {{ req.status.value }}
+        </span>
+        {% if req.chat_id %}
+        <a href="/chat/{{ req.chat_id }}" class="text-indigo-600 text-sm">Открыть чат →</a>
+        {% endif %}
+    </div>
+    {% else %}
+    <p class="text-sm text-slate-400">Нет исходящих заявок</p>
+    {% endfor %}
+</div>
+{% endblock %}
