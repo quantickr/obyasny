@@ -51,6 +51,12 @@ services:
     build: .
     command: python -m app.bot.main
     env_file: .env
+    # Timeweb избирательно режет подсети Telegram: DNS отдаёт для
+    # api.telegram.org заблокированный 149.154.166.110, тогда как
+    # 149.154.167.220 (тот же Bot API) доступен и getMe отвечает ok:true.
+    # Прибиваем хост к рабочему IP, минуя DNS.
+    extra_hosts:
+      - "api.telegram.org:149.154.167.220"
     depends_on:
       db:
         condition: service_healthy
