@@ -5,6 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.profanity import censor
 from app.models.topic import Topic, TopicKind, UserTopic
 
 
@@ -18,11 +19,12 @@ def slugify(name: str) -> str:
 async def get_or_create_topic(
     session: AsyncSession, name: str, category: str | None = None
 ) -> Topic:
-    slug = slugify(name)
+    clean_name = censor(name.strip())
+    slug = slugify(clean_name)
     existing = await session.scalar(select(Topic).where(Topic.slug == slug))
     if existing:
         return existing
-    topic = Topic(name=name.strip(), slug=slug, category=category)
+    topic = Topic(name=clean_name, slug=slug, category=category)
     session.add(topic)
     try:
         await session.flush()

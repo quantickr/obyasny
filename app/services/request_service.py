@@ -4,6 +4,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.profanity import censor
 from app.models.chat import ChatContext
 from app.models.chocolate import ChocolateReason
 from app.models.request import OfferType, Request, RequestStatus
@@ -29,7 +30,7 @@ async def create_request(
         sender_id=sender_id,
         receiver_id=receiver_id,
         topic_id=topic_id,
-        message=message,
+        message=censor(message),
         offer_type=offer_type,
         offer_topic_id=offer_topic_id,
         status=RequestStatus.pending,

@@ -2,6 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.profanity import censor
 from app.core.security import hash_password, verify_password
 from app.models.user import User
 
@@ -37,7 +38,7 @@ async def register_email(
     user = User(
         email=email,
         password_hash=hash_password(password),
-        display_name=display_name.strip() or email.split("@")[0],
+        display_name=censor(display_name.strip()) or email.split("@")[0],
     )
     session.add(user)
     await session.flush()
@@ -141,9 +142,9 @@ async def update_profile(
     show_tg_username: bool | None = None,
 ) -> User:
     if display_name is not None:
-        user.display_name = display_name.strip()
+        user.display_name = censor(display_name.strip())
     if bio is not None:
-        user.bio = bio.strip()
+        user.bio = censor(bio.strip())
     if show_tg_username is not None:
         user.show_tg_username = show_tg_username
     return user

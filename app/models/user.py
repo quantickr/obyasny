@@ -45,6 +45,11 @@ class User(Base, TimestampMixin):
         Integer, default=0, nullable=False
     )
 
+    # Пользователь добровольно выложен на доску (/board)
+    on_board: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+
     user_topics: Mapped[list["UserTopic"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )

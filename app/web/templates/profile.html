@@ -28,6 +28,23 @@
             <button class="text-sm bg-sky-500 text-white px-4 py-2 rounded-md hover:bg-sky-600">Привязать Telegram</button>
         </form>
         {% endif %}
+        <hr class="my-4">
+        <div>
+            <p class="text-sm text-slate-500 mb-2">
+                {% if user.on_board %}
+                Вы на доске — другие студенты видят ваш профиль и темы.
+                {% else %}
+                Выложите себя на доску, чтобы вас нашли по вашим темам.
+                {% endif %}
+            </p>
+            <form method="post" action="/profile/board/toggle">
+                {% if user.on_board %}
+                <button class="text-sm bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600">Снять с доски</button>
+                {% else %}
+                <button class="text-sm bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">Выложить на доску</button>
+                {% endif %}
+            </form>
+        </div>
     </div>
 
     <div class="bg-white p-6 rounded-xl border border-slate-200">
@@ -61,7 +78,9 @@
         <hr class="my-3">
         <form method="post" action="/profile/topics/add" class="space-y-2">
             <input type="text" name="topic_name" placeholder="Название темы" required
+                   list="topic-suggest" autocomplete="off"
                    class="w-full border border-slate-300 rounded-md px-3 py-2 text-sm">
+            <datalist id="topic-suggest"></datalist>
             <div class="flex gap-2">
                 <select name="kind" class="border border-slate-300 rounded-md px-2 py-2 text-sm flex-1">
                     <option value="can_teach">Могу объяснить</option>
@@ -75,4 +94,38 @@
         </form>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    const input = document.querySelector('input[name="topic_name"]');
+    const datalist = document.getElementById('topic-suggest');
+    if (!input || !datalist) return;
+    let timer = null;
+    input.addEventListener('input', function () {
+        const q = input.value.trim();
+        clearTimeout(timer);
+        if (q.length < 2) {
+            datalist.innerHTML = '';
+            return;
+        }
+        timer = setTimeout(async function () {
+            try {
+                const resp = await fetch(
+                    '/api/topics/suggest?q=' + encodeURIComponent(q)
+                );
+                if (!resp.ok) return;
+                const names = await resp.json();
+                datalist.innerHTML = '';
+                for (const name of names) {
+                    const opt = document.createElement('option');
+                    opt.value = name;
+                    datalist.appendChild(opt);
+                }
+            } catch (e) { /* тихо игнорируем сетевые сбои */ }
+        }, 200);
+    });
+})();
+</script>
 {% endblock %}

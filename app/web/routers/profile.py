@@ -77,6 +77,15 @@ async def remove_topic(
     return RedirectResponse(url="/profile", status_code=303)
 
 
+@router.post("/profile/board/toggle")
+async def toggle_board(user: CurrentUser, session: SessionDep):
+    from app.services import board_service
+
+    await board_service.toggle_board(session, user)
+    await session.commit()
+    return RedirectResponse(url="/profile", status_code=303)
+
+
 @router.post("/profile/link-telegram")
 async def link_telegram(user: CurrentUser):
     """Генерирует deep-link для привязки Telegram."""

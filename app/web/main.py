@@ -7,7 +7,16 @@ from fastapi.staticfiles import StaticFiles
 
 from app.core.logging import setup_logging
 from app.web.dependencies import RequireLoginRedirect
-from app.web.routers import auth, chat, listings, matches, profile, requests, search
+from app.web.routers import (
+    auth,
+    chat,
+    listings,
+    matches,
+    profile,
+    requests,
+    search,
+    topics,
+)
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -39,6 +48,7 @@ app.include_router(requests.router)
 app.include_router(chat.router)
 app.include_router(listings.router)
 app.include_router(matches.router)
+app.include_router(topics.router)
 
 
 @app.get("/healthz")
