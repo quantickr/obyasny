@@ -44,6 +44,26 @@ async def list_board_users(
     return list(await session.scalars(stmt))
 
 
+async def list_board_cards_plain(
+    session: AsyncSession, limit: int = 100
+) -> list[BoardCard]:
+    """Карточки доски без персонального ранжирования — для гостей.
+
+    Порядок как у list_board_users (свежие сверху), match_kind = MATCH_NONE.
+    """
+    users = await list_board_users(session, limit=limit)
+    cards: list[BoardCard] = []
+    for u in users:
+        can_teach = [
+            ut for ut in u.user_topics if ut.kind == TopicKind.can_teach
+        ]
+        wants_learn = [
+            ut for ut in u.user_topics if ut.kind == TopicKind.wants_learn
+        ]
+        cards.append(BoardCard(u, can_teach, wants_learn, MATCH_NONE))
+    return cards
+
+
 async def list_board_cards_ranked(
     session: AsyncSession, viewer_id: int, limit: int = 100
 ) -> list[BoardCard]:

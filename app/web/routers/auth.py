@@ -73,6 +73,7 @@ async def register_submit(
     session: SessionDep,
     email: str = Form(...),
     password: str = Form(...),
+    password_confirm: str = Form(...),
     display_name: str = Form(...),
     university: str = Form(...),
     course: str = Form(...),
@@ -83,13 +84,18 @@ async def register_submit(
             request, "auth/register.html", {"user": None, "error": msg}
         )
 
-    if not course.isdigit() or not (1 <= int(course) <= 6):
-        return _reject("Курс должен быть числом от 1 до 6")
+    if password != password_confirm:
+        return _reject("Пароли не совпадают")
+    if not course.isdigit() or not (1 <= int(course) <= 11):
+        return _reject("Курс/класс должен быть числом от 1 до 11")
     try:
         level = EduLevel(edu_level)
     except ValueError:
         return _reject("Некорректный уровень обучения")
-    if not university.strip():
+    # Школьник учится в школе — вуз не требуем, подставляем сами.
+    if level == EduLevel.schoolchild:
+        university = "Школа"
+    elif not university.strip():
         return _reject("Укажите вуз")
 
     try:

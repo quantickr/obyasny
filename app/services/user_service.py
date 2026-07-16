@@ -168,7 +168,7 @@ async def update_profile(
     if university is not None:
         user.university = ensure_clean(university.strip())
     if course is not None:
-        user.course = min(max(course, 1), 6)
+        user.course = min(max(course, 1), 11)
     if edu_level is not None:
         user.edu_level = edu_level
     if avatar_url is not None:

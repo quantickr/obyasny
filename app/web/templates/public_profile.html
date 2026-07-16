@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ profile_user.display_name }} — Объясни!{% endblock %}
 {% block content %}
-{% set edu_ru = {'bachelor': 'Бакалавриат', 'specialist': 'Специалитет', 'master': 'Магистратура', 'postgrad': 'Аспирантура'} %}
+{% set edu_ru = {'schoolchild': 'Школьник', 'bachelor': 'Бакалавриат', 'specialist': 'Специалитет', 'master': 'Магистратура', 'postgrad': 'Аспирантура'} %}
 <div class="max-w-2xl mx-auto space-y-6">
     <div class="bg-white p-6 rounded-xl border border-slate-200">
         <div class="flex items-center gap-4">
@@ -17,14 +17,14 @@
                 <h1 class="text-xl font-bold break-words">{{ profile_user.display_name }}</h1>
                 {% if profile_user.university %}
                 <p class="text-sm text-slate-500 break-words">
-                    {{ profile_user.university }}{% if profile_user.course %} · {{ profile_user.course }} курс{% endif %}{% if profile_user.edu_level %} · {{ edu_ru[profile_user.edu_level.value] }}{% endif %}
+                    {{ profile_user.university }}{% if profile_user.course %} · {{ profile_user.course }} {% if profile_user.edu_level.value == 'schoolchild' %}класс{% else %}курс{% endif %}{% endif %}{% if profile_user.edu_level %} · {{ edu_ru[profile_user.edu_level.value] }}{% endif %}
                 </p>
                 {% endif %}
                 {% if profile_user.show_tg_username and profile_user.telegram_username %}
                 <a href="https://t.me/{{ profile_user.telegram_username }}" class="text-xs text-sky-600">@{{ profile_user.telegram_username }}</a>
                 {% endif %}
             </div>
-            {% if profile_user.id == user.id %}
+            {% if user and profile_user.id == user.id %}
             <span class="ml-auto text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded shrink-0">Это вы</span>
             {% endif %}
         </div>
@@ -43,7 +43,12 @@
                 <span class="text-sm bg-green-50 text-green-800 px-2 py-1 rounded inline-block break-words">
                     {{ ut.topic.name }}{% if ut.level %} · {{ ut.level }}/10{% endif %}
                 </span>
-                {% if profile_user.id != user.id %}
+                {% if ut.details %}
+                <p class="text-xs text-slate-500 mt-0.5 break-words whitespace-pre-wrap">{{ ut.details }}</p>
+                {% endif %}
+                {% if not user %}
+                <a href="/register" class="inline-block mt-1 text-xs text-brand-600 hover:text-brand-700">Зарегистрируйтесь, чтобы отправить заявку</a>
+                {% elif profile_user.id != user.id %}
                 <details class="mt-1">
                     <summary class="text-xs text-brand-600 cursor-pointer select-none hover:text-brand-700">Отправить заявку</summary>
                     <form method="post" action="/search/request" class="mt-2 space-y-2">

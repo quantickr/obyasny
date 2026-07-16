@@ -66,11 +66,8 @@ async def set_user_topic(
 ) -> UserTopic:
     if level is not None:
         level = min(max(level, 1), 10)
-    # Подробности имеют смысл только для тем «хочу узнать».
-    if kind != TopicKind.wants_learn:
-        details = None
-    else:
-        details = ensure_clean(details) if details else None
+    # Подробности («Подробнее») применимы к обоим видам тем.
+    details = ensure_clean(details) if details else None
     # Снимаем id заранее: после возможного rollback объект topic станет expired.
     topic_id = topic.id
     existing = await session.scalar(

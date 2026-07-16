@@ -13,53 +13,85 @@
         {% endif %}
 
         <div class="flex items-center gap-4 mb-4">
-            {% if user.avatar_url %}
-            <img src="{{ user.avatar_url }}" alt="Аватар"
-                 class="w-20 h-20 rounded-full object-cover border border-slate-200">
-            {% else %}
-            <span class="w-20 h-20 rounded-full brand-gradient text-white grid place-items-center text-2xl font-bold">
-                {{ user.display_name[:1] | upper }}
-            </span>
-            {% endif %}
-            <form method="post" action="/profile/avatar" enctype="multipart/form-data" class="space-y-2">
-                <input type="file" name="file" accept="image/jpeg,image/png,image/webp" required
-                       class="text-sm block w-full text-slate-600
-                              file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0
-                              file:text-sm file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200">
-                <button class="text-sm bg-slate-700 text-white px-3 py-1.5 rounded-md hover:bg-slate-800">Загрузить аватар</button>
+            <div class="relative">
+                <button type="button" id="avatar-trigger" title="Изменить фото"
+                        class="block rounded-full focus:outline-none focus:ring-2 focus:ring-brand-400">
+                    {% if user.avatar_url %}
+                    <img src="{{ user.avatar_url }}" alt="Аватар"
+                         class="w-20 h-20 rounded-full object-cover border border-slate-200">
+                    {% else %}
+                    <span class="w-20 h-20 rounded-full brand-gradient text-white grid place-items-center text-2xl font-bold">
+                        {{ user.display_name[:1] | upper }}
+                    </span>
+                    {% endif %}
+                    <span class="absolute bottom-0 right-0 bg-slate-700 text-white rounded-full w-6 h-6 grid place-items-center text-xs border-2 border-white">✎</span>
+                </button>
+                <div id="avatar-menu"
+                     class="hidden absolute z-10 mt-1 left-0 bg-white border border-slate-200 rounded-md shadow-lg text-sm overflow-hidden">
+                    <button type="button" id="avatar-choose"
+                            class="block w-full text-left px-4 py-2 hover:bg-slate-100 whitespace-nowrap">Изменить фото</button>
+                </div>
+            </div>
+            <div>
+                <p class="text-sm text-slate-600">{{ user.display_name }}</p>
                 <p class="text-xs text-slate-400">JPG, PNG или WEBP, до 5 МБ</p>
-            </form>
+            </div>
+            <input type="file" id="avatar-file" accept="image/jpeg,image/png,image/webp" class="hidden">
+        </div>
+
+        <!-- Модалка кропа аватара -->
+        <div id="avatar-modal"
+             class="hidden fixed inset-0 z-50 bg-black/50 grid place-items-center p-4">
+            <div class="bg-white rounded-xl p-5 w-full max-w-sm">
+                <h3 class="font-bold mb-3 text-center">Обрезка фото</h3>
+                <div class="mx-auto rounded-full overflow-hidden border border-slate-300"
+                     style="width:240px;height:240px;">
+                    <canvas id="avatar-canvas" width="240" height="240"
+                            class="cursor-move touch-none" style="width:240px;height:240px;"></canvas>
+                </div>
+                <label class="block text-xs text-slate-500 mt-3">Масштаб</label>
+                <input type="range" id="avatar-zoom" min="1" max="3" step="0.01" value="1"
+                       class="w-full">
+                <div class="flex gap-2 mt-4">
+                    <button type="button" id="avatar-cancel"
+                            class="flex-1 border border-slate-300 text-slate-600 py-2 rounded-md hover:bg-slate-50">Отмена</button>
+                    <button type="button" id="avatar-confirm"
+                            class="flex-1 bg-indigo-600 text-white py-2 rounded-md hover:bg-indigo-700">Подтвердить</button>
+                </div>
+            </div>
         </div>
 
         <form method="post" action="/profile" class="space-y-3">
             <label class="block text-sm text-slate-500">Имя</label>
             <input type="text" name="display_name" value="{{ user.display_name }}" required
                    class="w-full border border-slate-300 rounded-md px-3 py-2">
-            <label class="block text-sm text-slate-500">Вуз</label>
-            <input type="text" name="university" value="{{ user.university or '' }}" required
-                   placeholder="Например, МГУ"
-                   list="university-suggest" autocomplete="off"
-                   class="w-full border border-slate-300 rounded-md px-3 py-2">
-            <datalist id="university-suggest"></datalist>
             <div class="flex gap-2">
                 <div class="flex-1">
-                    <label class="block text-sm text-slate-500">Курс</label>
-                    <select name="course" required class="w-full border border-slate-300 rounded-md px-3 py-2">
-                        {% for c in range(1, 7) %}
-                        <option value="{{ c }}" {% if user.course == c %}selected{% endif %}>{{ c }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="flex-1">
                     <label class="block text-sm text-slate-500">Уровень</label>
-                    <select name="edu_level" required class="w-full border border-slate-300 rounded-md px-3 py-2">
+                    <select name="edu_level" id="profile-edu-level" required class="w-full border border-slate-300 rounded-md px-3 py-2">
                         {% for lvl in edu_levels %}
                         <option value="{{ lvl.value }}" {% if user.edu_level == lvl %}selected{% endif %}>
-                            {% if lvl.value == 'bachelor' %}Бакалавриат{% elif lvl.value == 'specialist' %}Специалитет{% elif lvl.value == 'master' %}Магистратура{% else %}Аспирантура{% endif %}
+                            {% if lvl.value == 'schoolchild' %}Школьник{% elif lvl.value == 'bachelor' %}Бакалавриат{% elif lvl.value == 'specialist' %}Специалитет{% elif lvl.value == 'master' %}Магистратура{% else %}Аспирантура{% endif %}
                         </option>
                         {% endfor %}
                     </select>
                 </div>
+                <div class="flex-1">
+                    <label class="block text-sm text-slate-500" id="profile-course-label">Курс</label>
+                    <select name="course" required class="w-full border border-slate-300 rounded-md px-3 py-2">
+                        {% for c in range(1, 12) %}
+                        <option value="{{ c }}" {% if user.course == c %}selected{% endif %}>{{ c }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div id="profile-university-wrap">
+                <label class="block text-sm text-slate-500">Вуз</label>
+                <input type="text" name="university" value="{{ user.university or '' }}"
+                       placeholder="Например, МГУ"
+                       list="university-suggest" autocomplete="off"
+                       class="w-full border border-slate-300 rounded-md px-3 py-2">
+                <datalist id="university-suggest"></datalist>
             </div>
             <label class="block text-sm text-slate-500">О себе</label>
             <textarea name="bio" rows="3"
@@ -102,23 +134,28 @@
         <div class="mb-4">
             <p class="text-sm font-medium text-green-700 mb-1">Могу объяснить</p>
             {% for ut in can_teach %}
-            <div class="flex items-center justify-between gap-2 text-sm py-1">
-                <span class="min-w-0 break-words">{{ ut.topic.name }}</span>
-                <div class="flex items-center gap-2 shrink-0">
-                    <form method="post" action="/profile/topics/{{ ut.id }}/level">
-                        <select name="level" onchange="this.form.submit()"
-                                title="Оценка (1-10)"
-                                class="border border-slate-300 rounded-md px-1.5 py-1 text-xs">
-                            <option value="" {% if not ut.level %}selected{% endif %}>—</option>
-                            {% for n in range(1, 11) %}
-                            <option value="{{ n }}" {% if ut.level == n %}selected{% endif %}>{{ n }}/10</option>
-                            {% endfor %}
-                        </select>
-                    </form>
-                    <form method="post" action="/profile/topics/{{ ut.id }}/remove">
-                        <button class="text-red-400 hover:text-red-600">✕</button>
-                    </form>
+            <div class="py-1">
+                <div class="flex items-center justify-between gap-2 text-sm">
+                    <span class="min-w-0 break-words">{{ ut.topic.name }}</span>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <form method="post" action="/profile/topics/{{ ut.id }}/level">
+                            <select name="level" onchange="this.form.submit()"
+                                    title="Оценка (1-10)"
+                                    class="border border-slate-300 rounded-md px-1.5 py-1 text-xs">
+                                <option value="" {% if not ut.level %}selected{% endif %}>—</option>
+                                {% for n in range(1, 11) %}
+                                <option value="{{ n }}" {% if ut.level == n %}selected{% endif %}>{{ n }}/10</option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                        <form method="post" action="/profile/topics/{{ ut.id }}/remove">
+                            <button class="text-red-400 hover:text-red-600">✕</button>
+                        </form>
+                    </div>
                 </div>
+                {% if ut.details %}
+                <p class="text-xs text-slate-500 mt-0.5 break-words whitespace-pre-wrap">{{ ut.details }}</p>
+                {% endif %}
             </div>
             {% else %}
             <p class="text-sm text-slate-400">Пока пусто</p>
@@ -156,21 +193,23 @@
         </div>
         <hr class="my-3">
         <form method="post" action="/profile/topics/add" class="space-y-2">
-            <input type="text" name="topic_name" placeholder="Название темы" required
+            <input type="text" name="topic_name" id="topic-name" placeholder="Название темы" required
                    list="topic-suggest" autocomplete="off"
                    class="w-full border border-slate-300 rounded-md px-3 py-2 text-sm">
             <datalist id="topic-suggest"></datalist>
-            <div class="flex gap-2">
-                <select name="kind" id="topic-kind" class="border border-slate-300 rounded-md px-2 py-2 text-sm flex-1">
-                    <option value="can_teach">Могу объяснить</option>
-                    <option value="wants_learn">Хочу узнать</option>
-                </select>
-                <input type="number" name="level" min="1" max="10" placeholder="Оценка"
-                       title="Оценка за сессию/предмет (1-10), необязательно"
-                       class="border border-slate-300 rounded-md px-2 py-2 text-sm w-24">
+            <div id="topic-extra" class="hidden space-y-2">
+                <div class="flex gap-2">
+                    <select name="kind" id="topic-kind" class="border border-slate-300 rounded-md px-2 py-2 text-sm flex-1">
+                        <option value="can_teach">Могу объяснить</option>
+                        <option value="wants_learn">Хочу узнать</option>
+                    </select>
+                    <input type="number" name="level" min="1" max="10" placeholder="Оценка"
+                           title="Оценка за сессию/предмет (1-10), необязательно"
+                           class="border border-slate-300 rounded-md px-2 py-2 text-sm w-24">
+                </div>
+                <textarea name="details" id="topic-details" rows="2" placeholder="Подробнее"
+                          class="w-full border border-slate-300 rounded-md px-3 py-2 text-sm"></textarea>
             </div>
-            <textarea name="details" id="topic-details" rows="2" placeholder="Что именно непонятно? (для «Хочу узнать»)"
-                      class="w-full border border-slate-300 rounded-md px-3 py-2 text-sm hidden"></textarea>
             <button class="w-full bg-slate-700 text-white py-2 rounded-md hover:bg-slate-800 text-sm">Добавить</button>
         </form>
     </div>
@@ -179,16 +218,157 @@
 
 {% block scripts %}
 <script>
-// Поле «details» видно только когда выбрано «Хочу узнать».
+// Дополнительные поля темы (вид + подробнее) раскрываются после ввода названия.
 (function () {
-    const kind = document.getElementById('topic-kind');
-    const details = document.getElementById('topic-details');
-    if (!kind || !details) return;
+    const name = document.getElementById('topic-name');
+    const extra = document.getElementById('topic-extra');
+    if (!name || !extra) return;
     function sync() {
-        details.classList.toggle('hidden', kind.value !== 'wants_learn');
+        extra.classList.toggle('hidden', name.value.trim().length === 0);
     }
-    kind.addEventListener('change', sync);
+    name.addEventListener('input', sync);
+    name.addEventListener('focus', sync);
     sync();
+})();
+
+// Школьник: подпись «Класс» вместо «Курс», вуз не нужен.
+(function () {
+    const level = document.getElementById('profile-edu-level');
+    const courseLabel = document.getElementById('profile-course-label');
+    const uniWrap = document.getElementById('profile-university-wrap');
+    if (!level || !courseLabel || !uniWrap) return;
+    function apply() {
+        const isSchool = level.value === 'schoolchild';
+        courseLabel.textContent = isSchool ? 'Класс' : 'Курс';
+        uniWrap.classList.toggle('hidden', isSchool);
+    }
+    level.addEventListener('change', apply);
+    apply();
+})();
+
+// Редактор аватара: меню → выбор файла → кроп на canvas → загрузка.
+(function () {
+    const trigger = document.getElementById('avatar-trigger');
+    const menu = document.getElementById('avatar-menu');
+    const choose = document.getElementById('avatar-choose');
+    const fileInput = document.getElementById('avatar-file');
+    const modal = document.getElementById('avatar-modal');
+    const canvas = document.getElementById('avatar-canvas');
+    const zoom = document.getElementById('avatar-zoom');
+    const cancelBtn = document.getElementById('avatar-cancel');
+    const confirmBtn = document.getElementById('avatar-confirm');
+    if (!trigger || !fileInput || !canvas) return;
+    const ctx = canvas.getContext('2d');
+    const SIZE = canvas.width; // 240
+    let img = null, scale = 1, minScale = 1, offX = 0, offY = 0;
+    let dragging = false, lastX = 0, lastY = 0;
+
+    function toggleMenu(show) { menu.classList.toggle('hidden', !show); }
+    trigger.addEventListener('click', function (e) {
+        e.stopPropagation();
+        toggleMenu(menu.classList.contains('hidden'));
+    });
+    document.addEventListener('click', function () { toggleMenu(false); });
+    choose.addEventListener('click', function () {
+        toggleMenu(false);
+        fileInput.click();
+    });
+
+    function clampOffsets() {
+        const w = img.width * scale, h = img.height * scale;
+        const minX = SIZE - w, minY = SIZE - h;
+        offX = Math.min(0, Math.max(minX, offX));
+        offY = Math.min(0, Math.max(minY, offY));
+    }
+    function draw() {
+        ctx.clearRect(0, 0, SIZE, SIZE);
+        ctx.drawImage(img, offX, offY, img.width * scale, img.height * scale);
+    }
+    fileInput.addEventListener('change', function () {
+        const file = fileInput.files && fileInput.files[0];
+        if (!file) return;
+        if (file.size > 5 * 1024 * 1024) {
+            alert('Файл больше 5 МБ');
+            fileInput.value = '';
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = function (ev) {
+            img = new Image();
+            img.onload = function () {
+                minScale = Math.max(SIZE / img.width, SIZE / img.height);
+                scale = minScale;
+                zoom.min = minScale;
+                zoom.max = minScale * 3;
+                zoom.step = (minScale * 2) / 100;
+                zoom.value = minScale;
+                offX = (SIZE - img.width * scale) / 2;
+                offY = (SIZE - img.height * scale) / 2;
+                clampOffsets();
+                draw();
+                modal.classList.remove('hidden');
+            };
+            img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+
+    zoom.addEventListener('input', function () {
+        if (!img) return;
+        const cx = SIZE / 2, cy = SIZE / 2;
+        const relX = (cx - offX) / scale, relY = (cy - offY) / scale;
+        scale = parseFloat(zoom.value);
+        offX = cx - relX * scale;
+        offY = cy - relY * scale;
+        clampOffsets();
+        draw();
+    });
+
+    function startDrag(x, y) { dragging = true; lastX = x; lastY = y; }
+    function moveDrag(x, y) {
+        if (!dragging) return;
+        offX += x - lastX; offY += y - lastY;
+        lastX = x; lastY = y;
+        clampOffsets(); draw();
+    }
+    canvas.addEventListener('mousedown', function (e) { startDrag(e.clientX, e.clientY); });
+    window.addEventListener('mousemove', function (e) { moveDrag(e.clientX, e.clientY); });
+    window.addEventListener('mouseup', function () { dragging = false; });
+    canvas.addEventListener('touchstart', function (e) {
+        const t = e.touches[0]; startDrag(t.clientX, t.clientY);
+    }, { passive: true });
+    canvas.addEventListener('touchmove', function (e) {
+        const t = e.touches[0]; moveDrag(t.clientX, t.clientY);
+    }, { passive: true });
+    canvas.addEventListener('touchend', function () { dragging = false; });
+
+    function closeModal() {
+        modal.classList.add('hidden');
+        fileInput.value = '';
+        img = null;
+    }
+    cancelBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', function (e) {
+        if (e.target === modal) closeModal();
+    });
+
+    confirmBtn.addEventListener('click', function () {
+        if (!img) return;
+        confirmBtn.disabled = true;
+        canvas.toBlob(async function (blob) {
+            if (!blob) { confirmBtn.disabled = false; return; }
+            const fd = new FormData();
+            fd.append('file', blob, 'avatar.png');
+            try {
+                const resp = await fetch('/profile/avatar', { method: 'POST', body: fd });
+                if (resp.redirected) { window.location.href = resp.url; return; }
+                window.location.reload();
+            } catch (e) {
+                alert('Не удалось загрузить фото');
+                confirmBtn.disabled = false;
+            }
+        }, 'image/png');
+    });
 })();
 
 (function () {

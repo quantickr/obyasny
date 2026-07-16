@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 
 
 class EduLevel(str, enum.Enum):
+    schoolchild = "schoolchild"
     bachelor = "bachelor"
     specialist = "specialist"
     master = "master"
@@ -36,7 +37,7 @@ class User(Base, TimestampMixin):
             name="ck_user_has_login_method",
         ),
         CheckConstraint(
-            "course BETWEEN 1 AND 6",
+            "course BETWEEN 1 AND 11",
             name="ck_user_course_range",
         ),
     )

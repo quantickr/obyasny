@@ -13,7 +13,7 @@ from app.services import (
     upload_service,
     user_service,
 )
-from app.web.dependencies import CurrentUser, SessionDep
+from app.web.dependencies import CurrentUser, CurrentUserOptional, SessionDep
 from app.web.templating import templates
 
 router = APIRouter()
@@ -61,6 +61,10 @@ async def update_profile(
     edu_level: str = Form(""),
 ):
     course_val = int(course) if course.isdigit() else None
+    level = _parse_edu_level(edu_level)
+    # Школьник учится в школе — вуз подставляем сами.
+    if level == EduLevel.schoolchild:
+        university = "Школа"
     try:
         await user_service.update_profile(
             session,
@@ -70,7 +74,7 @@ async def update_profile(
             show_tg_username=show_tg_username == "on",
             university=university or None,
             course=course_val,
-            edu_level=_parse_edu_level(edu_level),
+            edu_level=level,
         )
         await session.commit()
     except ProfanityError as e:
@@ -162,7 +166,10 @@ async def toggle_board(user: CurrentUser, session: SessionDep):
 
 @router.get("/u/{user_id}", response_class=HTMLResponse)
 async def public_profile(
-    request: Request, user: CurrentUser, session: SessionDep, user_id: int
+    request: Request,
+    user: CurrentUserOptional,
+    session: SessionDep,
+    user_id: int,
 ):
     profile_user = await user_service.get_by_id(session, user_id)
     if profile_user is None:

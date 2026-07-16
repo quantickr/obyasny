@@ -15,29 +15,30 @@
                class="w-full border border-brand-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent">
         <input type="email" name="email" placeholder="Email" required
                class="w-full border border-brand-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent">
-        <input type="password" name="password" placeholder="Пароль" required minlength="6"
+        <input type="password" name="password" placeholder="Пароль" required minlength="6" id="reg-password"
                class="w-full border border-brand-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent">
-        <input type="text" name="university" placeholder="Вуз (например, МГУ)" required
+        <input type="password" name="password_confirm" placeholder="Повторите пароль" required minlength="6" id="reg-password-confirm"
+               class="w-full border border-brand-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent">
+        <select name="edu_level" required id="reg-edu-level"
+                class="w-full border border-brand-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent">
+            <option value="" disabled selected>Уровень обучения</option>
+            <option value="schoolchild">Школьник</option>
+            <option value="bachelor">Бакалавриат</option>
+            <option value="specialist">Специалитет</option>
+            <option value="master">Магистратура</option>
+            <option value="postgrad">Аспирантура</option>
+        </select>
+        <input type="text" name="university" placeholder="Вуз (например, МГУ)" required id="reg-university"
                list="university-suggest" autocomplete="off"
                class="w-full border border-brand-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent">
         <datalist id="university-suggest"></datalist>
-        <div class="flex gap-2">
-            <select name="course" required
-                    class="w-1/3 border border-brand-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent">
-                <option value="" disabled selected>Курс</option>
-                {% for c in range(1, 7) %}
-                <option value="{{ c }}">{{ c }}</option>
-                {% endfor %}
-            </select>
-            <select name="edu_level" required
-                    class="flex-1 border border-brand-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent">
-                <option value="" disabled selected>Уровень</option>
-                <option value="bachelor">Бакалавриат</option>
-                <option value="specialist">Специалитет</option>
-                <option value="master">Магистратура</option>
-                <option value="postgrad">Аспирантура</option>
-            </select>
-        </div>
+        <select name="course" required id="reg-course"
+                class="w-full border border-brand-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent">
+            <option value="" disabled selected id="reg-course-placeholder">Курс</option>
+            {% for c in range(1, 12) %}
+            <option value="{{ c }}">{{ c }}</option>
+            {% endfor %}
+        </select>
         <button class="w-full brand-gradient text-white py-2.5 rounded-lg font-bold hover:opacity-90 transition-opacity shadow-soft">Создать аккаунт</button>
     </form>
     <p class="text-sm text-slate-500 mt-5 text-center">
@@ -76,6 +77,42 @@
             } catch (e) { /* тихо игнорируем сетевые сбои */ }
         }, 200);
     });
+})();
+
+// Подтверждение пароля: подсветка несовпадения до отправки.
+(function () {
+    const pw = document.getElementById('reg-password');
+    const pw2 = document.getElementById('reg-password-confirm');
+    if (!pw || !pw2) return;
+    function check() {
+        pw2.setCustomValidity(
+            pw2.value && pw.value !== pw2.value ? 'Пароли не совпадают' : ''
+        );
+    }
+    pw.addEventListener('input', check);
+    pw2.addEventListener('input', check);
+})();
+
+// Школьник: вместо «Курс» — «Класс», вуз не нужен (подставляем «Школа»).
+(function () {
+    const level = document.getElementById('reg-edu-level');
+    const uni = document.getElementById('reg-university');
+    const coursePh = document.getElementById('reg-course-placeholder');
+    if (!level || !uni || !coursePh) return;
+    function apply() {
+        const isSchool = level.value === 'schoolchild';
+        coursePh.textContent = isSchool ? 'Класс' : 'Курс';
+        if (isSchool) {
+            uni.value = '';
+            uni.required = false;
+            uni.classList.add('hidden');
+        } else {
+            uni.required = true;
+            uni.classList.remove('hidden');
+        }
+    }
+    level.addEventListener('change', apply);
+    apply();
 })();
 </script>
 {% endblock %}

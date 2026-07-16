@@ -37,13 +37,13 @@
         <div class="min-w-0">
             <a href="/u/{{ student.id }}" class="font-bold leading-tight break-words hover:text-brand-600 transition-colors">{{ student.display_name }}</a>
             {% if student.university %}
-            <p class="text-xs text-slate-500 break-words">{{ student.university }}{% if student.course %} · {{ student.course }} курс{% endif %}</p>
+            <p class="text-xs text-slate-500 break-words">{{ student.university }}{% if student.course %} · {{ student.course }} {% if student.edu_level.value == 'schoolchild' %}класс{% else %}курс{% endif %}{% endif %}</p>
             {% endif %}
             {% if student.show_tg_username and student.telegram_username %}
             <p class="text-xs text-sky-600">@{{ student.telegram_username }}</p>
             {% endif %}
         </div>
-        {% if student.id == user.id %}
+        {% if user and student.id == user.id %}
         <span class="ml-auto text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded shrink-0">Это вы</span>
         {% elif card.match_kind == 3 %}
         <span class="ml-auto text-xs bg-brand-100 text-brand-700 px-2 py-1 rounded shrink-0">Идеальная пара</span>
@@ -63,7 +63,12 @@
                 <span class="text-sm bg-green-50 text-green-800 px-2 py-1 rounded inline-block break-words">
                     {{ ut.topic.name }}{% if ut.level %} · {{ ut.level }}/10{% endif %}
                 </span>
-                {% if student.id != user.id %}
+                {% if ut.details %}
+                <p class="text-xs text-slate-500 mt-0.5 break-words whitespace-pre-wrap">{{ ut.details }}</p>
+                {% endif %}
+                {% if not user %}
+                <a href="/register" class="inline-block mt-1 text-xs text-brand-600 hover:text-brand-700">Зарегистрируйтесь, чтобы отправить заявку</a>
+                {% elif student.id != user.id %}
                 <details class="mt-1">
                     <summary class="text-xs text-brand-600 cursor-pointer select-none hover:text-brand-700">Отправить заявку</summary>
                     <form method="post" action="/search/request" class="mt-2 space-y-2">
