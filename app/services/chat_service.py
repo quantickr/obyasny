@@ -90,6 +90,24 @@ async def find_message_by_tg_id(
     )
 
 
+async def find_message_by_tg_id_for_user(
+    session: AsyncSession, user_id: int, tg_message_id: int
+) -> Message | None:
+    """Ищет сообщение по tg_message_id в любом чате, где участвует user_id.
+
+    Нужно для reply из Telegram вне режима активного чата: по id
+    сообщения-уведомления находим чат и цитируемое сообщение.
+    """
+    return await session.scalar(
+        select(Message)
+        .join(Chat, Chat.id == Message.chat_id)
+        .where(
+            Message.tg_message_id == tg_message_id,
+            or_(Chat.user1_id == user_id, Chat.user2_id == user_id),
+        )
+    )
+
+
 async def set_tg_message_id(
     session: AsyncSession, message_id: int, tg_message_id: int
 ) -> None:

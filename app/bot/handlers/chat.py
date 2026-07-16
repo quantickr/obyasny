@@ -20,11 +20,45 @@ async def stop_chat(message: Message, state: FSMContext):
     await message.answer("Вы вышли из чата.")
 
 
+async def _relay_to_web(
+    message: Message,
+    session: AsyncSession,
+    sender_id: int,
+    chat_id: int,
+    reply_to_id: int | None,
+    reply_preview: str | None,
+) -> None:
+    """Сохраняет сообщение из Telegram и публикует в шину (дойдёт на сайт)."""
+    msg = await chat_service.save_message(
+        session,
+        chat_id=chat_id,
+        sender_id=sender_id,
+        body=message.text,
+        source=MessageSource.telegram,
+        tg_message_id=message.message_id,
+        reply_to_id=reply_to_id,
+    )
+    await session.commit()
+
+    event = ChatEvent(
+        chat_id=chat_id,
+        message_id=msg.id,
+        sender_id=sender_id,
+        body=message.text,
+        source="telegram",
+        tg_message_id=message.message_id,
+        reply_to_id=reply_to_id,
+        reply_preview=reply_preview,
+        created_at=msg.created_at.isoformat(),
+    )
+    await bus.publish_message(event)
+
+
 @router.message(ChatStates.active, F.text)
 async def relay_from_telegram(
     message: Message, state: FSMContext, session: AsyncSession
 ):
-    """Сообщение из Telegram → сохраняем и публикуем в шину (дойдёт на сайт)."""
+    """Сообщение из Telegram в режиме активного чата → пересылаем на сайт."""
     data = await state.get_data()
     chat_id = data.get("chat_id")
     if not chat_id:
@@ -51,29 +85,36 @@ async def relay_from_telegram(
             reply_to_id = original.id
             reply_preview = original.body[:120]
 
-    msg = await chat_service.save_message(
-        session,
-        chat_id=chat_id,
-        sender_id=me.id,
-        body=message.text,
-        source=MessageSource.telegram,
-        tg_message_id=message.message_id,
-        reply_to_id=reply_to_id,
+    await _relay_to_web(
+        message, session, me.id, chat_id, reply_to_id, reply_preview
     )
-    await session.commit()
 
-    event = ChatEvent(
-        chat_id=chat_id,
-        message_id=msg.id,
-        sender_id=me.id,
-        body=message.text,
-        source="telegram",
-        tg_message_id=message.message_id,
-        reply_to_id=reply_to_id,
-        reply_preview=reply_preview,
-        created_at=msg.created_at.isoformat(),
+
+@router.message(F.reply_to_message, F.text)
+async def relay_reply_out_of_chat(message: Message, session: AsyncSession):
+    """Reply в Telegram на доставленное ботом сообщение — вне режима чата.
+
+    Позволяет отвечать собеседнику, просто сделав reply на уведомление
+    «💬 Имя: текст», без нажатия кнопки «Открыть чат».
+    """
+    me = await user_service.get_by_telegram_id(session, message.from_user.id)
+    if me is None:
+        return
+
+    original = await chat_service.find_message_by_tg_id_for_user(
+        session, me.id, message.reply_to_message.message_id
     )
-    await bus.publish_message(event)
+    if original is None:
+        return  # reply не на сообщение чата — не наш случай
+
+    await _relay_to_web(
+        message,
+        session,
+        me.id,
+        original.chat_id,
+        reply_to_id=original.id,
+        reply_preview=original.body[:120],
+    )
 
 
 async def chat_relay_subscriber(bot) -> None:
