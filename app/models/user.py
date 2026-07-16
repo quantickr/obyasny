@@ -23,6 +23,7 @@ if TYPE_CHECKING:
 
 class EduLevel(str, enum.Enum):
     bachelor = "bachelor"
+    specialist = "specialist"
     master = "master"
     postgrad = "postgrad"
 
