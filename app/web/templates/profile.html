@@ -100,11 +100,23 @@
         <div class="mb-4">
             <p class="text-sm font-medium text-green-700 mb-1">Могу объяснить</p>
             {% for ut in can_teach %}
-            <div class="flex items-center justify-between text-sm py-1">
-                <span>{{ ut.topic.name }}{% if ut.level %} · оценка {{ ut.level }}/10{% endif %}</span>
-                <form method="post" action="/profile/topics/{{ ut.id }}/remove">
-                    <button class="text-red-400 hover:text-red-600">✕</button>
-                </form>
+            <div class="flex items-center justify-between gap-2 text-sm py-1">
+                <span class="min-w-0 break-words">{{ ut.topic.name }}</span>
+                <div class="flex items-center gap-2 shrink-0">
+                    <form method="post" action="/profile/topics/{{ ut.id }}/level">
+                        <select name="level" onchange="this.form.submit()"
+                                title="Оценка (1-10)"
+                                class="border border-slate-300 rounded-md px-1.5 py-1 text-xs">
+                            <option value="" {% if not ut.level %}selected{% endif %}>—</option>
+                            {% for n in range(1, 11) %}
+                            <option value="{{ n }}" {% if ut.level == n %}selected{% endif %}>{{ n }}/10</option>
+                            {% endfor %}
+                        </select>
+                    </form>
+                    <form method="post" action="/profile/topics/{{ ut.id }}/remove">
+                        <button class="text-red-400 hover:text-red-600">✕</button>
+                    </form>
+                </div>
             </div>
             {% else %}
             <p class="text-sm text-slate-400">Пока пусто</p>
@@ -114,11 +126,23 @@
             <p class="text-sm font-medium text-sky-700 mb-1">Хочу узнать</p>
             {% for ut in wants_learn %}
             <div class="py-1">
-                <div class="flex items-center justify-between text-sm">
-                    <span>{{ ut.topic.name }}{% if ut.level %} · оценка {{ ut.level }}/10{% endif %}</span>
-                    <form method="post" action="/profile/topics/{{ ut.id }}/remove">
-                        <button class="text-red-400 hover:text-red-600">✕</button>
-                    </form>
+                <div class="flex items-center justify-between gap-2 text-sm">
+                    <span class="min-w-0 break-words">{{ ut.topic.name }}</span>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <form method="post" action="/profile/topics/{{ ut.id }}/level">
+                            <select name="level" onchange="this.form.submit()"
+                                    title="Оценка (1-10)"
+                                    class="border border-slate-300 rounded-md px-1.5 py-1 text-xs">
+                                <option value="" {% if not ut.level %}selected{% endif %}>—</option>
+                                {% for n in range(1, 11) %}
+                                <option value="{{ n }}" {% if ut.level == n %}selected{% endif %}>{{ n }}/10</option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                        <form method="post" action="/profile/topics/{{ ut.id }}/remove">
+                            <button class="text-red-400 hover:text-red-600">✕</button>
+                        </form>
+                    </div>
                 </div>
                 {% if ut.details %}
                 <p class="text-xs text-slate-500 mt-0.5 break-words whitespace-pre-wrap">{{ ut.details }}</p>

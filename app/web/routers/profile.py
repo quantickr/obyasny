@@ -111,6 +111,21 @@ async def add_topic(
     return RedirectResponse(url="/profile", status_code=303)
 
 
+@router.post("/profile/topics/{user_topic_id}/level")
+async def update_topic_level(
+    user: CurrentUser,
+    session: SessionDep,
+    user_topic_id: int,
+    level: str = Form(""),
+):
+    lvl = int(level) if level.isdigit() else None
+    await topic_service.update_user_topic_level(
+        session, user.id, user_topic_id, lvl
+    )
+    await session.commit()
+    return RedirectResponse(url="/profile", status_code=303)
+
+
 @router.post("/profile/topics/{user_topic_id}/remove")
 async def remove_topic(
     user: CurrentUser, session: SessionDep, user_topic_id: int

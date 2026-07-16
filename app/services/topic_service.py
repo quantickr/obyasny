@@ -113,6 +113,26 @@ async def set_user_topic(
     return ut
 
 
+async def update_user_topic_level(
+    session: AsyncSession,
+    user_id: int,
+    user_topic_id: int,
+    level: int | None,
+) -> UserTopic | None:
+    """Меняет оценку у своей темы. level=None очищает оценку."""
+    if level is not None:
+        level = min(max(level, 1), 10)
+    ut = await session.scalar(
+        select(UserTopic).where(
+            UserTopic.id == user_topic_id, UserTopic.user_id == user_id
+        )
+    )
+    if ut is None:
+        return None
+    ut.level = level
+    return ut
+
+
 async def remove_user_topic(
     session: AsyncSession, user_id: int, user_topic_id: int
 ) -> None:
