@@ -38,7 +38,9 @@
             <label class="block text-sm text-slate-500">Вуз</label>
             <input type="text" name="university" value="{{ user.university or '' }}" required
                    placeholder="Например, МГУ"
+                   list="university-suggest" autocomplete="off"
                    class="w-full border border-slate-300 rounded-md px-3 py-2">
+            <datalist id="university-suggest"></datalist>
             <div class="flex gap-2">
                 <div class="flex-1">
                     <label class="block text-sm text-slate-500">Курс</label>
@@ -53,7 +55,7 @@
                     <select name="edu_level" required class="w-full border border-slate-300 rounded-md px-3 py-2">
                         {% for lvl in edu_levels %}
                         <option value="{{ lvl.value }}" {% if user.edu_level == lvl %}selected{% endif %}>
-                            {% if lvl.value == 'bachelor' %}Бакалавриат{% elif lvl.value == 'master' %}Магистратура{% else %}Аспирантура{% endif %}
+                            {% if lvl.value == 'bachelor' %}Бакалавриат{% elif lvl.value == 'specialist' %}Специалитет{% elif lvl.value == 'master' %}Магистратура{% else %}Аспирантура{% endif %}
                         </option>
                         {% endfor %}
                     </select>
@@ -205,6 +207,36 @@
             try {
                 const resp = await fetch(
                     '/api/topics/suggest?q=' + encodeURIComponent(q)
+                );
+                if (!resp.ok) return;
+                const names = await resp.json();
+                datalist.innerHTML = '';
+                for (const name of names) {
+                    const opt = document.createElement('option');
+                    opt.value = name;
+                    datalist.appendChild(opt);
+                }
+            } catch (e) { /* тихо игнорируем сетевые сбои */ }
+        }, 200);
+    });
+})();
+
+(function () {
+    const input = document.querySelector('input[name="university"]');
+    const datalist = document.getElementById('university-suggest');
+    if (!input || !datalist) return;
+    let timer = null;
+    input.addEventListener('input', function () {
+        const q = input.value.trim();
+        clearTimeout(timer);
+        if (q.length < 1) {
+            datalist.innerHTML = '';
+            return;
+        }
+        timer = setTimeout(async function () {
+            try {
+                const resp = await fetch(
+                    '/api/universities/suggest?q=' + encodeURIComponent(q)
                 );
                 if (!resp.ok) return;
                 const names = await resp.json();

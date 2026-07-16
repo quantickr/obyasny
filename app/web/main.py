@@ -16,6 +16,7 @@ from app.web.routers import (
     requests,
     search,
     topics,
+    universities,
 )
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -61,6 +62,7 @@ app.include_router(chat.router)
 app.include_router(listings.router)
 app.include_router(matches.router)
 app.include_router(topics.router)
+app.include_router(universities.router)
 
 
 @app.get("/healthz")
