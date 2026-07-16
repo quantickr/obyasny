@@ -104,6 +104,10 @@ async def incoming(session: AsyncSession, user_id: int) -> list[Request]:
             Request.receiver_id == user_id,
             Request.status == RequestStatus.pending,
         )
+        .options(
+            selectinload(Request.sender),
+            selectinload(Request.topic),
+        )
         .order_by(Request.created_at.desc())
     )
     return list(await session.scalars(stmt))
@@ -113,6 +117,10 @@ async def outgoing(session: AsyncSession, user_id: int) -> list[Request]:
     stmt = (
         select(Request)
         .where(Request.sender_id == user_id)
+        .options(
+            selectinload(Request.receiver),
+            selectinload(Request.topic),
+        )
         .order_by(Request.created_at.desc())
     )
     return list(await session.scalars(stmt))
@@ -169,6 +177,34 @@ async def decline_request(
     req.blocked_until = _blocked_until(block)
     await session.flush()
     return req
+
+
+async def decline_all_from(
+    session: AsyncSession, request_id: int, user_id: int, block: str = "forever"
+) -> None:
+    """Отклонить все pending-заявки от отправителя этой заявки к получателю.
+
+    Блокирует отправителя на срок block для всех отклонённых заявок.
+    """
+    req = await session.get(Request, request_id)
+    if not req or req.receiver_id != user_id:
+        raise RequestError("Заявка не найдена")
+
+    sender_id = req.sender_id
+    blocked_until = _blocked_until(block)
+    now = datetime.now(timezone.utc)
+    pending = await session.scalars(
+        select(Request).where(
+            Request.sender_id == sender_id,
+            Request.receiver_id == user_id,
+            Request.status == RequestStatus.pending,
+        )
+    )
+    for r in pending:
+        r.status = RequestStatus.declined
+        r.responded_at = now
+        r.blocked_until = blocked_until
+    await session.flush()
 
 
 def _blocked_until(block: str) -> datetime | None:

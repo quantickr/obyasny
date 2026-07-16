@@ -56,3 +56,20 @@ async def decline(
     except RequestError:
         pass
     return RedirectResponse(url="/requests", status_code=303)
+
+
+@router.post("/requests/{request_id}/decline-all")
+async def decline_all(
+    request_id: int,
+    user: CurrentUser,
+    session: SessionDep,
+    block: str = Form("forever"),
+):
+    try:
+        await request_service.decline_all_from(
+            session, request_id, user.id, block=block
+        )
+        await session.commit()
+    except RequestError:
+        pass
+    return RedirectResponse(url="/requests", status_code=303)

@@ -6,26 +6,44 @@
 <h2 class="font-semibold text-slate-600 mb-2">Входящие</h2>
 <div class="space-y-2 mb-6">
     {% for req in incoming %}
-    <div class="bg-white p-4 rounded-xl border border-slate-200 flex items-start justify-between gap-3">
-        <div class="min-w-0">
-            <p class="text-sm">Просят объяснить тему <b>#{{ req.topic_id }}</b></p>
-            {% if req.message %}<p class="text-sm text-slate-600 break-words whitespace-pre-wrap mt-1">{{ req.message }}</p>{% endif %}
-            <p class="text-xs text-slate-400 mt-1">Взамен: {{ 'шоколадки' if req.offer_type.value == 'chocolates' else 'обмен темой' }}</p>
-        </div>
-        <div class="flex items-center gap-2 shrink-0">
-            <form method="post" action="/requests/{{ req.id }}/accept">
-                <button class="bg-green-600 text-white px-3 py-1.5 rounded-md text-sm hover:bg-green-700">Принять</button>
-            </form>
-            <form method="post" action="/requests/{{ req.id }}/decline" class="flex items-center gap-1">
-                <select name="block" class="border border-slate-300 rounded-md px-1 py-1.5 text-xs" title="Блокировать заявки от этого пользователя">
-                    <option value="forever">навсегда</option>
-                    <option value="month">на месяц</option>
-                    <option value="week">на неделю</option>
-                    <option value="day">на день</option>
-                    <option value="none">без блока</option>
-                </select>
-                <button class="bg-slate-200 px-3 py-1.5 rounded-md text-sm hover:bg-slate-300">Отклонить</button>
-            </form>
+    <div class="bg-white p-4 rounded-xl border border-slate-200">
+        <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+                <p class="text-sm">
+                    <a href="/u/{{ req.sender.id }}" class="font-semibold text-brand-600 hover:text-brand-700 break-words">{{ req.sender.display_name }}</a>
+                    просит объяснить тему <b class="break-words">{{ req.topic.name }}</b>
+                </p>
+                {% if req.message %}<p class="text-sm text-slate-600 break-words whitespace-pre-wrap mt-1">{{ req.message }}</p>{% endif %}
+                <p class="text-xs text-slate-400 mt-1">Взамен: {{ 'шоколадки' if req.offer_type.value == 'chocolates' else 'обмен темой' }}</p>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+                <form method="post" action="/requests/{{ req.id }}/accept">
+                    <button class="bg-green-600 text-white px-3 py-1.5 rounded-md text-sm hover:bg-green-700">Принять</button>
+                </form>
+                <details class="relative">
+                    <summary class="bg-slate-200 px-3 py-1.5 rounded-md text-sm hover:bg-slate-300 cursor-pointer select-none list-none">Отклонить</summary>
+                    <div class="absolute right-0 z-10 mt-2 w-64 bg-white border border-slate-200 rounded-lg shadow-lg p-3 space-y-3">
+                        <form method="post" action="/requests/{{ req.id }}/decline">
+                            <input type="hidden" name="block" value="none">
+                            <button class="w-full text-left text-sm bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-md">
+                                Отклонить эту заявку по теме «{{ req.topic.name }}»
+                            </button>
+                        </form>
+                        <div class="border-t border-slate-100 pt-3">
+                            <p class="text-xs text-slate-500 mb-1">Отклонить все заявки от {{ req.sender.display_name }}:</p>
+                            <form method="post" action="/requests/{{ req.id }}/decline-all" class="flex items-center gap-1">
+                                <select name="block" class="flex-1 border border-slate-300 rounded-md px-1 py-1.5 text-xs">
+                                    <option value="forever">навсегда</option>
+                                    <option value="month">на месяц</option>
+                                    <option value="week">на неделю</option>
+                                    <option value="day">на день</option>
+                                </select>
+                                <button class="bg-red-100 text-red-700 px-3 py-1.5 rounded-md text-xs hover:bg-red-200">Отклонить</button>
+                            </form>
+                        </div>
+                    </div>
+                </details>
+            </div>
         </div>
     </div>
     {% else %}
@@ -36,8 +54,11 @@
 <h2 class="font-semibold text-slate-600 mb-2">Исходящие</h2>
 <div class="space-y-2">
     {% for req in outgoing %}
-    <div class="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between">
-        <p class="text-sm">Тема <b>#{{ req.topic_id }}</b></p>
+    <div class="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between gap-3">
+        <p class="text-sm min-w-0">
+            <a href="/u/{{ req.receiver.id }}" class="font-semibold text-brand-600 hover:text-brand-700 break-words">{{ req.receiver.display_name }}</a>
+            · тема <b class="break-words">{{ req.topic.name }}</b>
+        </p>
         <span class="text-xs px-2 py-1 rounded
             {% if req.status.value == 'accepted' %}bg-green-100 text-green-700
             {% elif req.status.value == 'declined' %}bg-red-100 text-red-700
