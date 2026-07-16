@@ -6,6 +6,15 @@
     <p class="text-sm text-slate-500">Кто готов объяснять и что хочет узнать. Отправьте заявку на нужную тему.</p>
 </div>
 
+<form method="get" action="/board" class="mb-6 flex gap-2">
+    <input type="text" name="q" value="{{ q or '' }}" placeholder="Поиск по теме..."
+           class="flex-1 border border-slate-300 rounded-md px-3 py-2 text-sm">
+    <button class="bg-brand-500 text-white px-5 py-2 rounded-md hover:bg-brand-600 text-sm">Найти</button>
+    {% if q %}
+    <a href="/board" class="px-4 py-2 rounded-md border border-slate-300 text-sm text-slate-600 hover:bg-slate-50">Сбросить</a>
+    {% endif %}
+</form>
+
 {% if error %}
 <div class="mb-4 bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-2 rounded-md">{{ error }}</div>
 {% endif %}
@@ -15,11 +24,21 @@
 <div class="bg-white p-5 rounded-xl border border-slate-200
     {% if card.match_kind == 3 %}ring-2 ring-brand-400{% endif %}">
     <div class="flex items-center gap-3 mb-3">
+        <a href="/u/{{ student.id }}" class="shrink-0">
+        {% if student.avatar_url %}
+        <img src="{{ student.avatar_url }}" alt="Аватар"
+             class="w-10 h-10 rounded-full object-cover border border-slate-200">
+        {% else %}
         <span class="w-10 h-10 rounded-full brand-gradient text-white grid place-items-center font-bold">
             {{ student.display_name[:1] | upper }}
         </span>
+        {% endif %}
+        </a>
         <div class="min-w-0">
-            <p class="font-bold leading-tight break-words">{{ student.display_name }}</p>
+            <a href="/u/{{ student.id }}" class="font-bold leading-tight break-words hover:text-brand-600 transition-colors">{{ student.display_name }}</a>
+            {% if student.university %}
+            <p class="text-xs text-slate-500 break-words">{{ student.university }}{% if student.course %} · {{ student.course }} курс{% endif %}</p>
+            {% endif %}
             {% if student.show_tg_username and student.telegram_username %}
             <p class="text-xs text-sky-600">@{{ student.telegram_username }}</p>
             {% endif %}
@@ -130,8 +149,13 @@
 {% endif %}
 {% else %}
 <div class="bg-white p-8 rounded-xl border border-slate-200 text-center">
+    {% if q %}
+    <p class="text-slate-500">По запросу «{{ q }}» ничего не найдено.</p>
+    <a href="/board" class="inline-block mt-3 text-sm bg-slate-600 text-white px-4 py-2 rounded-md hover:bg-slate-700">Показать всех</a>
+    {% else %}
     <p class="text-slate-500">Пока никто не выложился на доску.</p>
     <a href="/profile" class="inline-block mt-3 text-sm bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">Выложить себя на доску</a>
+    {% endif %}
 </div>
 {% endif %}
 {% endblock %}

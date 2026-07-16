@@ -1,8 +1,17 @@
-from fastapi import APIRouter, Form, Request
+from urllib.parse import quote
+
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.models.topic import TopicKind
-from app.services import chocolate_service, linking_service, topic_service, user_service
+from app.models.user import EduLevel
+from app.services import (
+    chocolate_service,
+    linking_service,
+    topic_service,
+    upload_service,
+    user_service,
+)
 from app.web.dependencies import CurrentUser, SessionDep
 from app.web.templating import templates
 
@@ -11,7 +20,7 @@ router = APIRouter()
 
 @router.get("/profile", response_class=HTMLResponse)
 async def profile_page(
-    request: Request, user: CurrentUser, session: SessionDep
+    request: Request, user: CurrentUser, session: SessionDep, error: str = ""
 ):
     user_topics = await topic_service.get_user_topics(session, user.id)
     can_teach = [ut for ut in user_topics if ut.kind == TopicKind.can_teach]
@@ -25,8 +34,17 @@ async def profile_page(
             "can_teach": can_teach,
             "wants_learn": wants_learn,
             "balance": balance,
+            "edu_levels": list(EduLevel),
+            "error": error,
         },
     )
+
+
+def _parse_edu_level(raw: str) -> EduLevel | None:
+    try:
+        return EduLevel(raw)
+    except ValueError:
+        return None
 
 
 @router.post("/profile")
@@ -37,14 +55,38 @@ async def update_profile(
     display_name: str = Form(...),
     bio: str = Form(""),
     show_tg_username: str = Form(""),
+    university: str = Form(""),
+    course: str = Form(""),
+    edu_level: str = Form(""),
 ):
+    course_val = int(course) if course.isdigit() else None
     await user_service.update_profile(
         session,
         user,
         display_name=display_name,
         bio=bio,
         show_tg_username=show_tg_username == "on",
+        university=university or None,
+        course=course_val,
+        edu_level=_parse_edu_level(edu_level),
     )
+    await session.commit()
+    return RedirectResponse(url="/profile", status_code=303)
+
+
+@router.post("/profile/avatar")
+async def upload_avatar(
+    user: CurrentUser,
+    session: SessionDep,
+    file: UploadFile = File(...),
+):
+    try:
+        avatar_url = await upload_service.save_avatar(file, user.id)
+    except upload_service.UploadError as e:
+        return RedirectResponse(
+            url=f"/profile?error={quote(str(e))}", status_code=303
+        )
+    await user_service.update_profile(session, user, avatar_url=avatar_url)
     await session.commit()
     return RedirectResponse(url="/profile", status_code=303)
 
@@ -56,13 +98,14 @@ async def add_topic(
     topic_name: str = Form(...),
     kind: str = Form(...),
     level: str = Form(""),
+    details: str = Form(""),
 ):
     topic = await topic_service.get_or_create_topic(session, topic_name)
     lvl = int(level) if level.isdigit() else None
     if lvl is not None:
         lvl = min(max(lvl, 1), 10)
     await topic_service.set_user_topic(
-        session, user.id, topic, TopicKind(kind), lvl
+        session, user.id, topic, TopicKind(kind), lvl, details=details or None
     )
     await session.commit()
     return RedirectResponse(url="/profile", status_code=303)
@@ -84,6 +127,29 @@ async def toggle_board(user: CurrentUser, session: SessionDep):
     await board_service.toggle_board(session, user)
     await session.commit()
     return RedirectResponse(url="/profile", status_code=303)
+
+
+@router.get("/u/{user_id}", response_class=HTMLResponse)
+async def public_profile(
+    request: Request, user: CurrentUser, session: SessionDep, user_id: int
+):
+    profile_user = await user_service.get_by_id(session, user_id)
+    if profile_user is None:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+    user_topics = await topic_service.get_user_topics(session, user_id)
+    can_teach = [ut for ut in user_topics if ut.kind == TopicKind.can_teach]
+    wants_learn = [ut for ut in user_topics if ut.kind == TopicKind.wants_learn]
+    return templates.TemplateResponse(
+        request,
+        "public_profile.html",
+        {
+            "user": user,
+            "profile_user": profile_user,
+            "can_teach": can_teach,
+            "wants_learn": wants_learn,
+        },
+    )
 
 
 @router.post("/profile/link-telegram")

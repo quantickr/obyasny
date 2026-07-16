@@ -5,6 +5,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.core.config import settings
 from app.core.security import create_session_token, verify_telegram_login
+from app.models.user import EduLevel
 from app.services import user_service
 from app.services.user_service import AuthError
 from app.web.dependencies import SESSION_COOKIE, CurrentUserOptional, SessionDep
@@ -72,16 +73,37 @@ async def register_submit(
     email: str = Form(...),
     password: str = Form(...),
     display_name: str = Form(...),
+    university: str = Form(...),
+    course: str = Form(...),
+    edu_level: str = Form(...),
 ):
+    def _reject(msg: str):
+        return templates.TemplateResponse(
+            request, "auth/register.html", {"user": None, "error": msg}
+        )
+
+    if not course.isdigit() or not (1 <= int(course) <= 6):
+        return _reject("Курс должен быть числом от 1 до 6")
+    try:
+        level = EduLevel(edu_level)
+    except ValueError:
+        return _reject("Некорректный уровень обучения")
+    if not university.strip():
+        return _reject("Укажите вуз")
+
     try:
         user = await user_service.register_email(
-            session, email, password, display_name
+            session,
+            email,
+            password,
+            display_name,
+            university=university,
+            course=int(course),
+            edu_level=level,
         )
         await session.commit()
     except AuthError as e:
-        return templates.TemplateResponse(
-            request, "auth/register.html", {"user": None, "error": str(e)}
-        )
+        return _reject(str(e))
     response = RedirectResponse(url="/profile", status_code=303)
     _set_session(response, user.id)
     return response

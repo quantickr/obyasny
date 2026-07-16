@@ -62,9 +62,15 @@ async def set_user_topic(
     topic: Topic,
     kind: TopicKind,
     level: int | None = None,
+    details: str | None = None,
 ) -> UserTopic:
     if level is not None:
         level = min(max(level, 1), 10)
+    # Подробности имеют смысл только для тем «хочу узнать».
+    if kind != TopicKind.wants_learn:
+        details = None
+    else:
+        details = censor(details) if details else None
     # Снимаем id заранее: после возможного rollback объект topic станет expired.
     topic_id = topic.id
     existing = await session.scalar(
@@ -76,8 +82,15 @@ async def set_user_topic(
     )
     if existing:
         existing.level = level
+        existing.details = details
         return existing
-    ut = UserTopic(user_id=user_id, topic_id=topic_id, kind=kind, level=level)
+    ut = UserTopic(
+        user_id=user_id,
+        topic_id=topic_id,
+        kind=kind,
+        level=level,
+        details=details,
+    )
     session.add(ut)
     try:
         await session.flush()
@@ -95,6 +108,7 @@ async def set_user_topic(
         if found is None:
             raise
         found.level = level
+        found.details = details
         return found
     return ut
 

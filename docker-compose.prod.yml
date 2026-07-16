@@ -28,6 +28,7 @@ services:
       # mount из docker-compose.yml. envsubst не задействуется.
       - ./nginx/nginx.prod.conf:/etc/nginx/conf.d/default.conf:ro
       - ./app/web/static:/static:ro
+      - uploads:/uploads:ro
       - certbot_www:/var/www/certbot:ro
       - certbot_conf:/etc/letsencrypt:ro
     ports:

@@ -1,35 +1,22 @@
 from urllib.parse import quote
 
-from fastapi import APIRouter, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import APIRouter, Form
+from fastapi.responses import RedirectResponse
 
 from app.models.request import OfferType
-from app.services import request_service, search_service, user_service
+from app.services import request_service, user_service
 from app.services.request_service import RequestError
 from app.web.dependencies import CurrentUser, SessionDep
-from app.web.templating import templates
 
 router = APIRouter()
 
 
-@router.get("/search", response_class=HTMLResponse)
-async def search_page(
-    request: Request,
-    user: CurrentUser,
-    session: SessionDep,
-    q: str = "",
-    error: str = "",
-):
-    results = []
-    if q:
-        results = await search_service.find_teachers_by_query(
-            session, q, exclude_user_id=user.id
-        )
-    return templates.TemplateResponse(
-        request,
-        "search.html",
-        {"user": user, "q": q, "results": results, "error": error},
-    )
+@router.get("/search")
+async def search_page(q: str = ""):
+    """Поиск переехал на доску. Прокидываем запрос в /board через редирект."""
+    if q.strip():
+        return RedirectResponse(url=f"/board?q={quote(q)}", status_code=303)
+    return RedirectResponse(url="/board", status_code=303)
 
 
 @router.post("/search/request")
@@ -44,7 +31,7 @@ async def send_request(
 ):
     receiver = await user_service.get_by_id(session, receiver_id)
     if receiver is None:
-        return RedirectResponse(url="/search", status_code=303)
+        return RedirectResponse(url="/board", status_code=303)
     try:
         await request_service.create_request(
             session,

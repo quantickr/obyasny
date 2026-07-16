@@ -11,6 +11,7 @@ from sqlalchemy import (
     Integer,
     SmallInteger,
     String,
+    Text,
     UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -55,6 +56,8 @@ class UserTopic(Base, TimestampMixin):
         Enum(TopicKind, name="topic_kind"), nullable=False
     )
     level: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    # Что именно непонятно (только для kind == wants_learn)
+    details: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     user: Mapped["User"] = relationship(back_populates="user_topics")
     topic: Mapped["Topic"] = relationship()

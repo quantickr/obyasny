@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.profanity import censor
 from app.core.security import hash_password, verify_password
-from app.models.user import User
+from app.models.user import EduLevel, User
 
 
 class AuthError(Exception):
@@ -30,7 +30,13 @@ async def get_by_telegram_id(
 
 
 async def register_email(
-    session: AsyncSession, email: str, password: str, display_name: str
+    session: AsyncSession,
+    email: str,
+    password: str,
+    display_name: str,
+    university: str,
+    course: int,
+    edu_level: EduLevel,
 ) -> User:
     email = email.lower().strip()
     if await get_by_email(session, email):
@@ -39,6 +45,9 @@ async def register_email(
         email=email,
         password_hash=hash_password(password),
         display_name=censor(display_name.strip()) or email.split("@")[0],
+        university=censor(university.strip()),
+        course=course,
+        edu_level=edu_level,
     )
     session.add(user)
     await session.flush()
@@ -72,6 +81,11 @@ async def get_or_create_telegram_user(
         telegram_id=telegram_id,
         telegram_username=telegram_username,
         display_name=display_name.strip() or "Студент",
+        # Учебные поля NOT NULL: заглушки. Пустой university — маркер
+        # незаполненности, пользователь дозаполнит в профиле.
+        university="",
+        course=1,
+        edu_level=EduLevel.bachelor,
     )
     session.add(user)
     try:
@@ -140,6 +154,10 @@ async def update_profile(
     display_name: str | None = None,
     bio: str | None = None,
     show_tg_username: bool | None = None,
+    university: str | None = None,
+    course: int | None = None,
+    edu_level: EduLevel | None = None,
+    avatar_url: str | None = None,
 ) -> User:
     if display_name is not None:
         user.display_name = censor(display_name.strip())
@@ -147,4 +165,12 @@ async def update_profile(
         user.bio = censor(bio.strip())
     if show_tg_username is not None:
         user.show_tg_username = show_tg_username
+    if university is not None:
+        user.university = censor(university.strip())
+    if course is not None:
+        user.course = min(max(course, 1), 6)
+    if edu_level is not None:
+        user.edu_level = edu_level
+    if avatar_url is not None:
+        user.avatar_url = avatar_url
     return user

@@ -7,10 +7,58 @@
             <h1 class="text-xl font-bold">Профиль</h1>
             <span class="text-sm bg-amber-100 text-amber-800 px-2 py-1 rounded">🍫 {{ balance }}</span>
         </div>
+
+        {% if error %}
+        <div class="mb-4 bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-2 rounded-md">{{ error }}</div>
+        {% endif %}
+
+        <div class="flex items-center gap-4 mb-4">
+            {% if user.avatar_url %}
+            <img src="{{ user.avatar_url }}" alt="Аватар"
+                 class="w-20 h-20 rounded-full object-cover border border-slate-200">
+            {% else %}
+            <span class="w-20 h-20 rounded-full brand-gradient text-white grid place-items-center text-2xl font-bold">
+                {{ user.display_name[:1] | upper }}
+            </span>
+            {% endif %}
+            <form method="post" action="/profile/avatar" enctype="multipart/form-data" class="space-y-2">
+                <input type="file" name="file" accept="image/jpeg,image/png,image/webp" required
+                       class="text-sm block w-full text-slate-600
+                              file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0
+                              file:text-sm file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200">
+                <button class="text-sm bg-slate-700 text-white px-3 py-1.5 rounded-md hover:bg-slate-800">Загрузить аватар</button>
+                <p class="text-xs text-slate-400">JPG, PNG или WEBP, до 5 МБ</p>
+            </form>
+        </div>
+
         <form method="post" action="/profile" class="space-y-3">
             <label class="block text-sm text-slate-500">Имя</label>
             <input type="text" name="display_name" value="{{ user.display_name }}" required
                    class="w-full border border-slate-300 rounded-md px-3 py-2">
+            <label class="block text-sm text-slate-500">Вуз</label>
+            <input type="text" name="university" value="{{ user.university or '' }}" required
+                   placeholder="Например, МГУ"
+                   class="w-full border border-slate-300 rounded-md px-3 py-2">
+            <div class="flex gap-2">
+                <div class="flex-1">
+                    <label class="block text-sm text-slate-500">Курс</label>
+                    <select name="course" required class="w-full border border-slate-300 rounded-md px-3 py-2">
+                        {% for c in range(1, 7) %}
+                        <option value="{{ c }}" {% if user.course == c %}selected{% endif %}>{{ c }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="flex-1">
+                    <label class="block text-sm text-slate-500">Уровень</label>
+                    <select name="edu_level" required class="w-full border border-slate-300 rounded-md px-3 py-2">
+                        {% for lvl in edu_levels %}
+                        <option value="{{ lvl.value }}" {% if user.edu_level == lvl %}selected{% endif %}>
+                            {% if lvl.value == 'bachelor' %}Бакалавриат{% elif lvl.value == 'master' %}Магистратура{% else %}Аспирантура{% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
             <label class="block text-sm text-slate-500">О себе</label>
             <textarea name="bio" rows="3"
                       class="w-full border border-slate-300 rounded-md px-3 py-2">{{ user.bio or '' }}</textarea>
@@ -65,11 +113,16 @@
         <div class="mb-4">
             <p class="text-sm font-medium text-sky-700 mb-1">Хочу узнать</p>
             {% for ut in wants_learn %}
-            <div class="flex items-center justify-between text-sm py-1">
-                <span>{{ ut.topic.name }}{% if ut.level %} · оценка {{ ut.level }}/10{% endif %}</span>
-                <form method="post" action="/profile/topics/{{ ut.id }}/remove">
-                    <button class="text-red-400 hover:text-red-600">✕</button>
-                </form>
+            <div class="py-1">
+                <div class="flex items-center justify-between text-sm">
+                    <span>{{ ut.topic.name }}{% if ut.level %} · оценка {{ ut.level }}/10{% endif %}</span>
+                    <form method="post" action="/profile/topics/{{ ut.id }}/remove">
+                        <button class="text-red-400 hover:text-red-600">✕</button>
+                    </form>
+                </div>
+                {% if ut.details %}
+                <p class="text-xs text-slate-500 mt-0.5 break-words whitespace-pre-wrap">{{ ut.details }}</p>
+                {% endif %}
             </div>
             {% else %}
             <p class="text-sm text-slate-400">Пока пусто</p>
@@ -82,7 +135,7 @@
                    class="w-full border border-slate-300 rounded-md px-3 py-2 text-sm">
             <datalist id="topic-suggest"></datalist>
             <div class="flex gap-2">
-                <select name="kind" class="border border-slate-300 rounded-md px-2 py-2 text-sm flex-1">
+                <select name="kind" id="topic-kind" class="border border-slate-300 rounded-md px-2 py-2 text-sm flex-1">
                     <option value="can_teach">Могу объяснить</option>
                     <option value="wants_learn">Хочу узнать</option>
                 </select>
@@ -90,6 +143,8 @@
                        title="Оценка за сессию/предмет (1-10), необязательно"
                        class="border border-slate-300 rounded-md px-2 py-2 text-sm w-24">
             </div>
+            <textarea name="details" id="topic-details" rows="2" placeholder="Что именно непонятно? (для «Хочу узнать»)"
+                      class="w-full border border-slate-300 rounded-md px-3 py-2 text-sm hidden"></textarea>
             <button class="w-full bg-slate-700 text-white py-2 rounded-md hover:bg-slate-800 text-sm">Добавить</button>
         </form>
     </div>
@@ -98,6 +153,18 @@
 
 {% block scripts %}
 <script>
+// Поле «details» видно только когда выбрано «Хочу узнать».
+(function () {
+    const kind = document.getElementById('topic-kind');
+    const details = document.getElementById('topic-details');
+    if (!kind || !details) return;
+    function sync() {
+        details.classList.toggle('hidden', kind.value !== 'wants_learn');
+    }
+    kind.addEventListener('change', sync);
+    sync();
+})();
+
 (function () {
     const input = document.querySelector('input[name="topic_name"]');
     const datalist = document.getElementById('topic-suggest');

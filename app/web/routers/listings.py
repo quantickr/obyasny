@@ -11,13 +11,26 @@ router = APIRouter()
 
 @router.get("/board", response_class=HTMLResponse)
 async def board_page(
-    request: Request, user: CurrentUser, session: SessionDep, error: str = ""
+    request: Request,
+    user: CurrentUser,
+    session: SessionDep,
+    error: str = "",
+    q: str = "",
 ):
     cards = await board_service.list_board_cards_ranked(session, user.id)
+    query = q.strip().lower()
+    if query:
+        # Фильтр по теме: оставляем карточки, где название темы (в любом из
+        # списков «может объяснить» / «хочет узнать») содержит запрос.
+        def matches(card):
+            topics = card.can_teach + card.wants_learn
+            return any(query in ut.topic.name.lower() for ut in topics)
+
+        cards = [c for c in cards if matches(c)]
     return templates.TemplateResponse(
         request,
         "board.html",
-        {"user": user, "cards": cards, "error": error},
+        {"user": user, "cards": cards, "error": error, "q": q},
     )
 
 

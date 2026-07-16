@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}{{ profile_user.display_name }} — Объясни!{% endblock %}
+{% block content %}
+{% set edu_ru = {'bachelor': 'Бакалавриат', 'master': 'Магистратура', 'postgrad': 'Аспирантура'} %}
+<div class="max-w-2xl mx-auto space-y-6">
+    <div class="bg-white p-6 rounded-xl border border-slate-200">
+        <div class="flex items-center gap-4">
+            {% if profile_user.avatar_url %}
+            <img src="{{ profile_user.avatar_url }}" alt="Аватар"
+                 class="w-20 h-20 rounded-full object-cover border border-slate-200">
+            {% else %}
+            <span class="w-20 h-20 rounded-full brand-gradient text-white grid place-items-center text-2xl font-bold">
+                {{ profile_user.display_name[:1] | upper }}
+            </span>
+            {% endif %}
+            <div class="min-w-0">
+                <h1 class="text-xl font-bold break-words">{{ profile_user.display_name }}</h1>
+                {% if profile_user.university %}
+                <p class="text-sm text-slate-500 break-words">
+                    {{ profile_user.university }}{% if profile_user.course %} · {{ profile_user.course }} курс{% endif %}{% if profile_user.edu_level %} · {{ edu_ru[profile_user.edu_level.value] }}{% endif %}
+                </p>
+                {% endif %}
+                {% if profile_user.show_tg_username and profile_user.telegram_username %}
+                <a href="https://t.me/{{ profile_user.telegram_username }}" class="text-xs text-sky-600">@{{ profile_user.telegram_username }}</a>
+                {% endif %}
+            </div>
+            {% if profile_user.id == user.id %}
+            <span class="ml-auto text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded shrink-0">Это вы</span>
+            {% endif %}
+        </div>
+
+        {% if profile_user.bio %}
+        <p class="text-sm text-slate-600 mt-4 break-words whitespace-pre-wrap">{{ profile_user.bio }}</p>
+        {% endif %}
+
+        {% if profile_user.id != user.id %}
+        <form method="post" action="/board/connect" class="mt-4">
+            <input type="hidden" name="partner_id" value="{{ profile_user.id }}">
+            <button class="text-sm bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">Написать напрямую</button>
+        </form>
+        {% endif %}
+    </div>
+
+    <div class="bg-white p-6 rounded-xl border border-slate-200">
+        <p class="text-sm font-semibold text-green-700 mb-2">Может объяснить</p>
+        {% if can_teach %}
+        <div class="space-y-2 mb-4">
+            {% for ut in can_teach %}
+            <div>
+                <span class="text-sm bg-green-50 text-green-800 px-2 py-1 rounded inline-block break-words">
+                    {{ ut.topic.name }}{% if ut.level %} · {{ ut.level }}/10{% endif %}
+                </span>
+                {% if profile_user.id != user.id %}
+                <details class="mt-1">
+                    <summary class="text-xs text-brand-600 cursor-pointer select-none hover:text-brand-700">Отправить заявку</summary>
+                    <form method="post" action="/search/request" class="mt-2 space-y-2">
+                        <input type="hidden" name="receiver_id" value="{{ profile_user.id }}">
+                        <input type="hidden" name="topic_id" value="{{ ut.topic.id }}">
+                        <input type="hidden" name="next_url" value="/u/{{ profile_user.id }}">
+                        <textarea name="message" rows="2" placeholder="Что предлагаете взамен, детали обмена, доп. информация..."
+                                  class="w-full border border-slate-300 rounded-md px-2 py-1.5 text-sm"></textarea>
+                        <div class="flex items-center gap-2">
+                            <select name="offer_type" class="border border-slate-300 rounded-md px-2 py-1.5 text-xs">
+                                <option value="chocolates">🍫 Шоколадки</option>
+                                <option value="exchange">🔄 Обмен темой</option>
+                            </select>
+                            <button class="text-xs bg-brand-500 text-white px-3 py-1.5 rounded-md hover:bg-brand-600">Отправить</button>
+                        </div>
+                    </form>
+                </details>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-xs text-slate-400 mb-4">Пока не указано</p>
+        {% endif %}
+
+        <p class="text-sm font-semibold text-sky-700 mb-2">Хочет узнать</p>
+        {% if wants_learn %}
+        <div class="space-y-2">
+            {% for ut in wants_learn %}
+            <div>
+                <span class="text-sm bg-sky-50 text-sky-800 px-2 py-1 rounded inline-block break-words">
+                    {{ ut.topic.name }}{% if ut.level %} · {{ ut.level }}/10{% endif %}
+                </span>
+                {% if ut.details %}
+                <p class="text-xs text-slate-500 mt-0.5 break-words whitespace-pre-wrap">{{ ut.details }}</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-xs text-slate-400">Пока не указано</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

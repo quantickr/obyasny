@@ -19,20 +19,32 @@ from app.web.routers import (
 )
 
 BASE_DIR = Path(__file__).resolve().parent
+UPLOAD_DIR = Path("/app/uploads")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     setup_logging()
+    (UPLOAD_DIR / "avatars").mkdir(parents=True, exist_ok=True)
     yield
 
 
 app = FastAPI(title="Объясни!", lifespan=lifespan)
 
+# Директория загрузок должна существовать до монтирования StaticFiles.
+(UPLOAD_DIR / "avatars").mkdir(parents=True, exist_ok=True)
+
 app.mount(
     "/static",
     StaticFiles(directory=str(BASE_DIR / "static")),
     name="static",
+)
+
+# Fallback для dev: в проде отдаёт nginx (location /uploads/).
+app.mount(
+    "/uploads",
+    StaticFiles(directory=str(UPLOAD_DIR)),
+    name="uploads",
 )
 
 
