@@ -1,13 +1,14 @@
 {% extends "base.html" %}
 {% block title %}Доска — Объясни!{% endblock %}
 {% block content %}
+{% set edu_ru = {'schoolchild': 'Школьник', 'bachelor': 'Бакалавриат', 'specialist': 'Специалитет', 'master': 'Магистратура', 'postgrad': 'Аспирантура'} %}
 <div class="mb-6">
     <h1 class="text-2xl font-extrabold">Доска студентов</h1>
     <p class="text-sm text-slate-500">Кто готов объяснять и что хочет узнать. Отправьте заявку на нужную тему.</p>
 </div>
 
 <form method="get" action="/board" class="mb-6 flex gap-2">
-    <input type="text" name="q" value="{{ q or '' }}" placeholder="Поиск по теме..."
+    <input type="text" name="q" value="{{ q or '' }}" placeholder="Поиск по теме или вузу..."
            class="flex-1 border border-slate-300 rounded-md px-3 py-2 text-sm">
     <button class="bg-brand-500 text-white px-5 py-2 rounded-md hover:bg-brand-600 text-sm">Найти</button>
     {% if q %}
@@ -37,7 +38,9 @@
         <div class="min-w-0">
             <a href="/u/{{ student.id }}" class="font-bold leading-tight break-words hover:text-brand-600 transition-colors">{{ student.display_name }}</a>
             {% if student.university %}
-            <p class="text-xs text-slate-500 break-words">{{ student.university }}{% if student.course %} · {{ student.course }} {% if student.edu_level.value == 'schoolchild' %}класс{% else %}курс{% endif %}{% endif %}</p>
+            <p class="mt-0.5">
+                <span class="inline-block text-xs font-medium bg-orange-50 text-orange-700 px-2 py-0.5 rounded break-words">{{ student.university }}{% if student.course %} · {{ student.course }} {% if student.edu_level.value == 'schoolchild' %}класс{% else %}курс{% endif %}{% endif %}{% if student.edu_level %} · {{ edu_ru[student.edu_level.value] }}{% endif %}</span>
+            </p>
             {% endif %}
             {% if student.show_tg_username and student.telegram_username %}
             <p class="text-xs text-sky-600">@{{ student.telegram_username }}</p>

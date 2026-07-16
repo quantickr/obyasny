@@ -23,11 +23,14 @@ async def board_page(
         cards = await board_service.list_board_cards_ranked(session, user.id)
     query = q.strip().lower()
     if query:
-        # Фильтр по теме: оставляем карточки, где название темы (в любом из
-        # списков «может объяснить» / «хочет узнать») содержит запрос.
+        # Фильтр: оставляем карточки, где запрос содержится в названии темы
+        # (в любом из списков «может объяснить» / «хочет узнать») ИЛИ в вузе.
         def matches(card):
             topics = card.can_teach + card.wants_learn
-            return any(query in ut.topic.name.lower() for ut in topics)
+            if any(query in ut.topic.name.lower() for ut in topics):
+                return True
+            uni = card.student.university or ""
+            return query in uni.lower()
 
         cards = [c for c in cards if matches(c)]
     return templates.TemplateResponse(

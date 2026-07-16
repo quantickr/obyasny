@@ -3,6 +3,9 @@
 {% block content %}
 {% set edu_ru = {'schoolchild': 'Школьник', 'bachelor': 'Бакалавриат', 'specialist': 'Специалитет', 'master': 'Магистратура', 'postgrad': 'Аспирантура'} %}
 <div class="max-w-2xl mx-auto space-y-6">
+    <a href="/board" class="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-brand-600 transition-colors">
+        <span aria-hidden="true">←</span> Назад к доске
+    </a>
     <div class="bg-white p-6 rounded-xl border border-slate-200">
         <div class="flex items-center gap-4">
             {% if profile_user.avatar_url %}
