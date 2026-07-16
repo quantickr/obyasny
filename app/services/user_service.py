@@ -2,7 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.profanity import censor
+from app.core.profanity import ensure_clean
 from app.core.security import hash_password, verify_password
 from app.models.user import EduLevel, User
 
@@ -44,8 +44,8 @@ async def register_email(
     user = User(
         email=email,
         password_hash=hash_password(password),
-        display_name=censor(display_name.strip()) or email.split("@")[0],
-        university=censor(university.strip()),
+        display_name=ensure_clean(display_name.strip()) or email.split("@")[0],
+        university=ensure_clean(university.strip()),
         course=course,
         edu_level=edu_level,
     )
@@ -160,13 +160,13 @@ async def update_profile(
     avatar_url: str | None = None,
 ) -> User:
     if display_name is not None:
-        user.display_name = censor(display_name.strip())
+        user.display_name = ensure_clean(display_name.strip())
     if bio is not None:
-        user.bio = censor(bio.strip())
+        user.bio = ensure_clean(bio.strip())
     if show_tg_username is not None:
         user.show_tg_username = show_tg_username
     if university is not None:
-        user.university = censor(university.strip())
+        user.university = ensure_clean(university.strip())
     if course is not None:
         user.course = min(max(course, 1), 6)
     if edu_level is not None:

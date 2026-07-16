@@ -3,6 +3,7 @@ from urllib.parse import quote
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 
+from app.core.profanity import ProfanityError
 from app.models.topic import TopicKind
 from app.models.user import EduLevel
 from app.services import (
@@ -60,17 +61,22 @@ async def update_profile(
     edu_level: str = Form(""),
 ):
     course_val = int(course) if course.isdigit() else None
-    await user_service.update_profile(
-        session,
-        user,
-        display_name=display_name,
-        bio=bio,
-        show_tg_username=show_tg_username == "on",
-        university=university or None,
-        course=course_val,
-        edu_level=_parse_edu_level(edu_level),
-    )
-    await session.commit()
+    try:
+        await user_service.update_profile(
+            session,
+            user,
+            display_name=display_name,
+            bio=bio,
+            show_tg_username=show_tg_username == "on",
+            university=university or None,
+            course=course_val,
+            edu_level=_parse_edu_level(edu_level),
+        )
+        await session.commit()
+    except ProfanityError as e:
+        return RedirectResponse(
+            url=f"/profile?error={quote(str(e))}", status_code=303
+        )
     return RedirectResponse(url="/profile", status_code=303)
 
 
@@ -100,14 +106,24 @@ async def add_topic(
     level: str = Form(""),
     details: str = Form(""),
 ):
-    topic = await topic_service.get_or_create_topic(session, topic_name)
     lvl = int(level) if level.isdigit() else None
     if lvl is not None:
         lvl = min(max(lvl, 1), 10)
-    await topic_service.set_user_topic(
-        session, user.id, topic, TopicKind(kind), lvl, details=details or None
-    )
-    await session.commit()
+    try:
+        topic = await topic_service.get_or_create_topic(session, topic_name)
+        await topic_service.set_user_topic(
+            session,
+            user.id,
+            topic,
+            TopicKind(kind),
+            lvl,
+            details=details or None,
+        )
+        await session.commit()
+    except ProfanityError as e:
+        return RedirectResponse(
+            url=f"/profile?error={quote(str(e))}", status_code=303
+        )
     return RedirectResponse(url="/profile", status_code=303)
 
 

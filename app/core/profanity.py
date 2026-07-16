@@ -209,6 +209,19 @@ def _find_spans(norm: _Norm) -> list[tuple[int, int]]:
     return hits
 
 
+#: Сообщение об ошибке для пользователя при обнаружении мата.
+PROFANITY_MESSAGE = (
+    "В тексте есть ненормативная лексика. Пожалуйста, замените её."
+)
+
+
+class ProfanityError(Exception):
+    """Поднимается, когда ввод содержит грубый мат (для отклонения формы)."""
+
+    def __init__(self, message: str = PROFANITY_MESSAGE):
+        super().__init__(message)
+
+
 def contains_profanity(text: str | None) -> bool:
     if not text:
         return False
@@ -216,6 +229,13 @@ def contains_profanity(text: str | None) -> bool:
     if not norm.spans:
         return False
     return bool(_RU_RE.search(norm.ru) or _EN_RE.search(norm.en))
+
+
+def ensure_clean(text: str | None) -> str | None:
+    """Вернуть text как есть, либо поднять ProfanityError при наличии мата."""
+    if contains_profanity(text):
+        raise ProfanityError()
+    return text
 
 
 def censor(text: str | None) -> str | None:

@@ -4,6 +4,7 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.core.config import settings
+from app.core.profanity import ProfanityError
 from app.core.security import create_session_token, verify_telegram_login
 from app.models.user import EduLevel
 from app.services import user_service
@@ -102,6 +103,8 @@ async def register_submit(
             edu_level=level,
         )
         await session.commit()
+    except ProfanityError as e:
+        return _reject(str(e))
     except AuthError as e:
         return _reject(str(e))
     response = RedirectResponse(url="/profile", status_code=303)

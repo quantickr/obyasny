@@ -4,7 +4,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.profanity import censor
+from app.core.profanity import ProfanityError, ensure_clean
 from app.models.chat import ChatContext
 from app.models.chocolate import ChocolateReason
 from app.models.request import OfferType, Request, RequestStatus
@@ -34,6 +34,11 @@ async def create_request(
 ) -> Request:
     if sender_id == receiver_id:
         raise RequestError("Нельзя отправить заявку самому себе")
+
+    try:
+        message = ensure_clean(message)
+    except ProfanityError as e:
+        raise RequestError(str(e)) from e
 
     # Одна активная заявка на пару (sender→receiver) по всем темам.
     active = await session.scalar(
@@ -78,7 +83,7 @@ async def create_request(
         sender_id=sender_id,
         receiver_id=receiver_id,
         topic_id=topic_id,
-        message=censor(message),
+        message=message,
         offer_type=offer_type,
         offer_topic_id=offer_topic_id,
         status=RequestStatus.pending,

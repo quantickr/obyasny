@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.profanity import censor
+from app.core.profanity import ensure_clean
 from app.models.topic import Topic, TopicKind, UserTopic
 
 
@@ -19,7 +19,7 @@ def slugify(name: str) -> str:
 async def get_or_create_topic(
     session: AsyncSession, name: str, category: str | None = None
 ) -> Topic:
-    clean_name = censor(name.strip())
+    clean_name = ensure_clean(name.strip())
     slug = slugify(clean_name)
     existing = await session.scalar(select(Topic).where(Topic.slug == slug))
     if existing:
@@ -70,7 +70,7 @@ async def set_user_topic(
     if kind != TopicKind.wants_learn:
         details = None
     else:
-        details = censor(details) if details else None
+        details = ensure_clean(details) if details else None
     # Снимаем id заранее: после возможного rollback объект topic станет expired.
     topic_id = topic.id
     existing = await session.scalar(
