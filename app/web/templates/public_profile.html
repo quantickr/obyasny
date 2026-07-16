@@ -32,13 +32,6 @@
         {% if profile_user.bio %}
         <p class="text-sm text-slate-600 mt-4 break-words whitespace-pre-wrap">{{ profile_user.bio }}</p>
         {% endif %}
-
-        {% if profile_user.id != user.id %}
-        <form method="post" action="/board/connect" class="mt-4">
-            <input type="hidden" name="partner_id" value="{{ profile_user.id }}">
-            <button class="text-sm bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">Написать напрямую</button>
-        </form>
-        {% endif %}
     </div>
 
     <div class="bg-white p-6 rounded-xl border border-slate-200">

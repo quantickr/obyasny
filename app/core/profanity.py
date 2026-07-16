@@ -40,6 +40,13 @@ _LEET: dict[str, str] = {
     "|": "i",
 }
 
+# Многосимвольные начертания букв (проверяются ДО посимвольного _LEET).
+# «}|{» — распространённый обход буквы «ж» (например «}|{опа»).
+_MULTIGLYPH: dict[str, str] = {
+    "}|{": "ж",
+}
+_MULTIGLYPH_MAXLEN = max(len(k) for k in _MULTIGLYPH)
+
 # Транслит латиницы в кириллицу для RU-проекции.
 _TRANSLIT_RU: dict[str, str] = {
     "a": "а",
@@ -71,11 +78,22 @@ _TRANSLIT_RU: dict[str, str] = {
 # с явным матерным окончанием — иначе масса ложных срабатываний («требую»,
 # «себе», «небо»). Граница \b работает по краям нормализованной строки.
 _RU_ROOTS: list[str] = [
-    r"ху[йеяёю]",
+    r"ху[йеяё]",
+    # ху[юуи] — только в начале слова: ловит формы «хую», латинские обходы
+    # «xyu»→«хуу», «xyi»→«хуи», но не трогает «сухую», «духи», «петухи».
+    r"\bху[юуи]",
     r"пизд",
     r"пезд",
     r"бля[дтц]",
     r"\bбля\b",
+    r"блуа",  # латинский обход «blyat»/«blyad» → транслит «блуат»/«блуад»
+    r"сук[аиеою]",
+    r"сучк",
+    r"жоп",
+    r"анилинг",
+    r"кунилинг",  # куннилингус (нн схлопывается в н при нормализации)
+    r"минет",
+    r"фел[яа]ц",  # фелляция/фелация (лл схлопывается в л при нормализации)
     r"(?:вы|за|на|про|подъ|разъ|съ|у|до|при|от|пере)[еёо]б",
     r"\b[её]б[аеёилмнт]",  # ебать/ебал/ебло/ебёт в начале слова
     r"долбо[её]б",
@@ -109,6 +127,7 @@ _EN_ROOTS: list[str] = [
     r"cock",
     r"whore",
     r"slut",
+    r"fagot",  # faggot/fagot — «gg» схлопывается в «g» при нормализации
 ]
 
 _RU_RE = re.compile("|".join(f"(?:{p})" for p in _RU_ROOTS))
@@ -138,9 +157,24 @@ def _normalize(text: str) -> _Norm:
     spans: list[list[int]] = []
     prev: str | None = None
 
-    for idx, ch in enumerate(text):
-        low = ch.lower()
-        base = _LEET.get(low, low)
+    idx = 0
+    n = len(text)
+    while idx < n:
+        # Сначала пробуем многосимвольные начертания («}|{» → «ж»).
+        glyph_len = 0
+        base = ""
+        for length in range(_MULTIGLYPH_MAXLEN, 1, -1):
+            chunk = text[idx : idx + length]
+            if chunk in _MULTIGLYPH:
+                base = _MULTIGLYPH[chunk]
+                glyph_len = length
+                break
+        if glyph_len == 0:
+            base = _LEET.get(text[idx].lower(), text[idx].lower())
+            glyph_len = 1
+        # Индексы всех символов текущего начертания (для маскировки целиком).
+        glyph_idxs = list(range(idx, idx + glyph_len))
+        idx += glyph_len
 
         ru_ch = _TRANSLIT_RU.get(base, base if _RU_LETTER.fullmatch(base) else "")
         en_ch = base if _EN_LETTER.fullmatch(base) else ""
@@ -148,18 +182,18 @@ def _normalize(text: str) -> _Norm:
         if not ru_ch and not en_ch:
             # разделитель/символ — привязываем к предыдущему значимому символу
             if spans:
-                spans[-1].append(idx)
+                spans[-1].extend(glyph_idxs)
             continue
 
         key = (ru_ch, en_ch)
         if key == prev:
             # повтор той же буквы — схлопываем
-            spans[-1].append(idx)
+            spans[-1].extend(glyph_idxs)
             continue
 
         ru_chars.append(ru_ch or "\x00")
         en_chars.append(en_ch or "\x00")
-        spans.append([idx])
+        spans.append(glyph_idxs)
         prev = key
 
     return _Norm("".join(ru_chars), "".join(en_chars), spans)

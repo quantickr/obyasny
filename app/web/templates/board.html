@@ -109,13 +109,6 @@
         <p class="text-xs text-slate-400">Пока не указано</p>
         {% endif %}
     </div>
-
-    {% if student.id != user.id %}
-    <form method="post" action="/board/connect">
-        <input type="hidden" name="partner_id" value="{{ student.id }}">
-        <button class="w-full text-sm bg-indigo-600 text-white px-3 py-2 rounded-md hover:bg-indigo-700">Написать напрямую</button>
-    </form>
-    {% endif %}
 </div>
 {% endmacro %}
 
