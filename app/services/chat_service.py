@@ -1,4 +1,4 @@
-from sqlalchemy import or_, select
+from sqlalchemy import or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.chat import Chat, ChatContext, Message, MessageSource
@@ -63,6 +63,7 @@ async def save_message(
     body: str,
     source: MessageSource,
     tg_message_id: int | None = None,
+    reply_to_id: int | None = None,
 ) -> Message:
     msg = Message(
         chat_id=chat_id,
@@ -70,10 +71,37 @@ async def save_message(
         body=body,
         source=source,
         tg_message_id=tg_message_id,
+        reply_to_id=reply_to_id,
     )
     session.add(msg)
     await session.flush()
     return msg
+
+
+async def find_message_by_tg_id(
+    session: AsyncSession, chat_id: int, tg_message_id: int
+) -> Message | None:
+    """Ищет сообщение чата по id сообщения в Telegram (для сопоставления reply)."""
+    return await session.scalar(
+        select(Message).where(
+            Message.chat_id == chat_id,
+            Message.tg_message_id == tg_message_id,
+        )
+    )
+
+
+async def set_tg_message_id(
+    session: AsyncSession, message_id: int, tg_message_id: int
+) -> None:
+    """Сохраняет id доставленного в Telegram сообщения обратно в запись БД.
+
+    Нужно, чтобы reply в Telegram на web-сообщение сопоставился с записью в БД.
+    """
+    await session.execute(
+        update(Message)
+        .where(Message.id == message_id)
+        .values(tg_message_id=tg_message_id)
+    )
 
 
 async def get_messages(

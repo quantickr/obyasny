@@ -10,7 +10,6 @@ from app.models.chat import ChatContext
 from app.services import (
     chat_service,
     chocolate_service,
-    match_service,
     user_service,
 )
 
@@ -39,27 +38,6 @@ async def profile(message: Message, session: AsyncSession):
         f"Аккаунт: {linked}\n\n"
         f"Управлять темами удобнее на сайте: {settings.webapp_base_url}/profile"
     )
-
-
-@router.message(F.text == "🤝 Пары")
-async def matches(message: Message, session: AsyncSession):
-    me = await user_service.get_by_telegram_id(session, message.from_user.id)
-    if me is None:
-        await message.answer("Сначала /start")
-        return
-    candidates = await match_service.find_mutual_matches(session, me.id, limit=5)
-    if not candidates:
-        await message.answer(
-            "Пока нет взаимовыгодных пар. Добавьте больше тем в профиль на сайте."
-        )
-        return
-    for c in candidates:
-        await message.answer(
-            f"🤝 {c.partner.display_name}\n"
-            f"Вы объясните: {c.i_teach_topic.name}\n"
-            f"Партнёр объяснит: {c.partner_teaches_topic.name}",
-            reply_markup=_connect_button(c.partner.id),
-        )
 
 
 def _connect_button(partner_id: int):

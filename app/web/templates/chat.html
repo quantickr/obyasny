@@ -13,17 +13,22 @@
     <div id="messages" class="flex-1 overflow-y-auto p-4 space-y-2">
         {% for m in messages %}
         <div class="flex {% if m.sender_id == user.id %}justify-end{% endif %}">
-            <div class="{% if m.sender_id == user.id %}bg-indigo-600 text-white{% else %}bg-slate-100{% endif %} px-3 py-2 rounded-lg max-w-[70%] text-sm">
+            <div class="{% if m.sender_id == user.id %}bg-indigo-600 text-white{% else %}bg-slate-100{% endif %} px-3 py-2 rounded-lg max-w-[70%] text-sm break-words whitespace-pre-wrap">
+                {% if m.reply_to %}
+                <div class="mb-1 pl-2 border-l-2 {% if m.sender_id == user.id %}border-indigo-300 text-indigo-100{% else %}border-slate-400 text-slate-500{% endif %} text-xs italic break-words">
+                    {{ m.reply_to.body[:120] }}{% if m.reply_to.body|length > 120 %}…{% endif %}
+                </div>
+                {% endif %}
                 {{ m.body }}
                 <span class="text-[10px] opacity-60 ml-1">{{ 'TG' if m.source.value == 'telegram' else '' }}</span>
             </div>
         </div>
         {% endfor %}
     </div>
-    <form id="chat-form" class="p-3 border-t border-slate-200 flex gap-2">
-        <input id="chat-input" type="text" placeholder="Сообщение..." autocomplete="off"
-               class="flex-1 border border-slate-300 rounded-md px-3 py-2">
-        <button class="bg-indigo-600 text-white px-5 rounded-md hover:bg-indigo-700">→</button>
+    <form id="chat-form" class="p-3 border-t border-slate-200 flex gap-2 items-end">
+        <textarea id="chat-input" rows="1" placeholder="Сообщение..." autocomplete="off"
+                  class="flex-1 border border-slate-300 rounded-md px-3 py-2 resize-none max-h-32 overflow-y-auto"></textarea>
+        <button type="submit" class="bg-indigo-600 text-white px-5 py-2 rounded-md hover:bg-indigo-700">→</button>
     </form>
 </div>
 {% endblock %}
@@ -32,33 +37,75 @@
     const chatId = {{ chat.id }};
     const myId = {{ user.id }};
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    const ws = new WebSocket(`${proto}://${location.host}/ws/chat/${chatId}`);
     const box = document.getElementById('messages');
     const input = document.getElementById('chat-input');
+    let ws = null;
 
-    function addMessage(body, mine, src) {
+    function addMessage(body, mine, src, replyPreview) {
         const wrap = document.createElement('div');
         wrap.className = 'flex ' + (mine ? 'justify-end' : '');
         const bubble = document.createElement('div');
         bubble.className = (mine ? 'bg-indigo-600 text-white' : 'bg-slate-100') +
-            ' px-3 py-2 rounded-lg max-w-[70%] text-sm';
-        bubble.textContent = body + (src === 'telegram' ? ' (TG)' : '');
+            ' px-3 py-2 rounded-lg max-w-[70%] text-sm break-words whitespace-pre-wrap';
+        if (replyPreview) {
+            const quote = document.createElement('div');
+            quote.className = 'mb-1 pl-2 border-l-2 text-xs italic break-words ' +
+                (mine ? 'border-indigo-300 text-indigo-100' : 'border-slate-400 text-slate-500');
+            quote.textContent = replyPreview;
+            bubble.appendChild(quote);
+        }
+        // Тело сообщения — отдельным текстовым узлом (безопасно от XSS).
+        bubble.appendChild(document.createTextNode(body));
+        if (src === 'telegram') {
+            const tag = document.createElement('span');
+            tag.className = 'text-[10px] opacity-60 ml-1';
+            tag.textContent = 'TG';
+            bubble.appendChild(tag);
+        }
         wrap.appendChild(bubble);
         box.appendChild(wrap);
         box.scrollTop = box.scrollHeight;
     }
 
-    ws.onmessage = (e) => {
-        const ev = JSON.parse(e.data);
-        addMessage(ev.body, ev.sender_id === myId, ev.source);
-    };
+    function connect() {
+        ws = new WebSocket(`${proto}://${location.host}/ws/chat/${chatId}`);
+        ws.onmessage = (e) => {
+            const ev = JSON.parse(e.data);
+            addMessage(ev.body, ev.sender_id === myId, ev.source, ev.reply_preview);
+        };
+        ws.onclose = () => {
+            // Устойчивость: переподключаемся через 2 секунды.
+            setTimeout(connect, 2000);
+        };
+    }
+    connect();
+
+    function send() {
+        const body = input.value.trim();
+        if (!body) return;
+        if (!ws || ws.readyState !== WebSocket.OPEN) return;
+        ws.send(JSON.stringify({ body }));
+        input.value = '';
+        input.style.height = 'auto';
+    }
+
+    // Enter = отправить, Shift+Enter = перенос строки.
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            send();
+        }
+    });
+
+    // Авто-высота textarea под содержимое.
+    input.addEventListener('input', () => {
+        input.style.height = 'auto';
+        input.style.height = Math.min(input.scrollHeight, 128) + 'px';
+    });
 
     document.getElementById('chat-form').addEventListener('submit', (e) => {
         e.preventDefault();
-        const body = input.value.trim();
-        if (!body) return;
-        ws.send(JSON.stringify({ body }));
-        input.value = '';
+        send();
     });
 
     box.scrollTop = box.scrollHeight;

@@ -13,7 +13,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
 
@@ -67,6 +67,12 @@ class Message(Base):
         Enum(MessageSource, name="message_source"), nullable=False
     )
     tg_message_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    reply_to_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("messages.id", ondelete="SET NULL"), nullable=True
+    )
+    reply_to: Mapped["Message | None"] = relationship(
+        "Message", remote_side="Message.id", lazy="joined"
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

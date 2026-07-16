@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.services import request_service
@@ -42,9 +42,16 @@ async def accept(request_id: int, user: CurrentUser, session: SessionDep):
 
 
 @router.post("/requests/{request_id}/decline")
-async def decline(request_id: int, user: CurrentUser, session: SessionDep):
+async def decline(
+    request_id: int,
+    user: CurrentUser,
+    session: SessionDep,
+    block: str = Form("forever"),
+):
     try:
-        await request_service.decline_request(session, request_id, user.id)
+        await request_service.decline_request(
+            session, request_id, user.id, block=block
+        )
         await session.commit()
     except RequestError:
         pass

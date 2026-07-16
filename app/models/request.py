@@ -36,6 +36,7 @@ class Request(Base, TimestampMixin):
     __table_args__ = (
         Index("ix_requests_receiver_status", "receiver_id", "status"),
         Index("ix_requests_sender_status", "sender_id", "status"),
+        Index("ix_requests_pair_status", "sender_id", "receiver_id", "status"),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
@@ -66,5 +67,8 @@ class Request(Base, TimestampMixin):
         BigInteger, ForeignKey("chats.id", ondelete="SET NULL"), nullable=True
     )
     responded_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    blocked_until: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

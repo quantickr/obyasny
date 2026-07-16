@@ -57,14 +57,30 @@ async def accept(callback: CallbackQuery, session: AsyncSession):
 
 
 @router.callback_query(F.data.startswith("req_decline:"))
-async def decline(callback: CallbackQuery, session: AsyncSession):
+async def decline(callback: CallbackQuery):
+    """Отклонение: показываем выбор срока блокировки повторных заявок."""
     req_id = int(callback.data.split(":")[1])
+    from app.bot.keyboards import decline_block_actions
+
+    await callback.answer()
+    await callback.message.edit_text(
+        "Отклонить заявку. Заблокировать повторные заявки от этого пользователя?",
+        reply_markup=decline_block_actions(req_id),
+    )
+
+
+@router.callback_query(F.data.startswith("req_block:"))
+async def decline_with_block(callback: CallbackQuery, session: AsyncSession):
+    _, req_id_raw, block = callback.data.split(":")
+    req_id = int(req_id_raw)
     me = await user_service.get_by_telegram_id(session, callback.from_user.id)
     if me is None:
         await callback.answer("Сначала /start", show_alert=True)
         return
     try:
-        await request_service.decline_request(session, req_id, me.id)
+        await request_service.decline_request(
+            session, req_id, me.id, block=block
+        )
         await session.commit()
         await callback.message.edit_reply_markup(reply_markup=None)
         await callback.answer("Отклонено")

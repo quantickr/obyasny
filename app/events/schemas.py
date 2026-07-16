@@ -10,4 +10,6 @@ class ChatEvent(BaseModel):
     body: str
     source: str  # 'web' | 'telegram'
     tg_message_id: int | None = None
+    reply_to_id: int | None = None
+    reply_preview: str | None = None  # усечённый текст цитируемого сообщения
     created_at: str

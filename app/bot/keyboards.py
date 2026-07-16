@@ -9,8 +9,8 @@ from aiogram.types import (
 def main_menu() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="🔍 Найти помощь"), KeyboardButton(text="🤝 Пары")],
-            [KeyboardButton(text="📥 Заявки"), KeyboardButton(text="🍫 Баланс")],
+            [KeyboardButton(text="🔍 Найти помощь"), KeyboardButton(text="📥 Заявки")],
+            [KeyboardButton(text="🍫 Баланс")],
             [KeyboardButton(text="👤 Профиль")],
         ],
         resize_keyboard=True,
@@ -28,6 +28,37 @@ def request_actions(request_id: int) -> InlineKeyboardMarkup:
                     text="❌ Отклонить", callback_data=f"req_decline:{request_id}"
                 ),
             ]
+        ]
+    )
+
+
+def decline_block_actions(request_id: int) -> InlineKeyboardMarkup:
+    """Выбор срока блокировки повторных заявок при отклонении."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="Без блока",
+                    callback_data=f"req_block:{request_id}:none",
+                ),
+                InlineKeyboardButton(
+                    text="День", callback_data=f"req_block:{request_id}:day"
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="Неделя", callback_data=f"req_block:{request_id}:week"
+                ),
+                InlineKeyboardButton(
+                    text="Месяц", callback_data=f"req_block:{request_id}:month"
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text="Навсегда",
+                    callback_data=f"req_block:{request_id}:forever",
+                ),
+            ],
         ]
     )
 

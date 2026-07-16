@@ -1,3 +1,5 @@
+from urllib.parse import quote
+
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
@@ -12,7 +14,11 @@ router = APIRouter()
 
 @router.get("/search", response_class=HTMLResponse)
 async def search_page(
-    request: Request, user: CurrentUser, session: SessionDep, q: str = ""
+    request: Request,
+    user: CurrentUser,
+    session: SessionDep,
+    q: str = "",
+    error: str = "",
 ):
     results = []
     if q:
@@ -22,7 +28,7 @@ async def search_page(
     return templates.TemplateResponse(
         request,
         "search.html",
-        {"user": user, "q": q, "results": results},
+        {"user": user, "q": q, "results": results, "error": error},
     )
 
 
@@ -34,6 +40,7 @@ async def send_request(
     topic_id: int = Form(...),
     message: str = Form(""),
     offer_type: str = Form("chocolates"),
+    next_url: str = Form("/board"),
 ):
     receiver = await user_service.get_by_id(session, receiver_id)
     if receiver is None:
@@ -48,6 +55,9 @@ async def send_request(
             offer_type=OfferType(offer_type),
         )
         await session.commit()
-    except RequestError:
-        pass
+    except RequestError as e:
+        sep = "&" if "?" in next_url else "?"
+        return RedirectResponse(
+            url=f"{next_url}{sep}error={quote(str(e))}", status_code=303
+        )
     return RedirectResponse(url="/requests?tab=outgoing", status_code=303)

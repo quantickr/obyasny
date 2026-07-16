@@ -40,6 +40,17 @@ async def relay_from_telegram(
         await state.clear()
         return
 
+    # Reply в Telegram → находим цитируемое сообщение чата по его tg_message_id.
+    reply_to_id: int | None = None
+    reply_preview: str | None = None
+    if message.reply_to_message is not None:
+        original = await chat_service.find_message_by_tg_id(
+            session, chat_id, message.reply_to_message.message_id
+        )
+        if original is not None:
+            reply_to_id = original.id
+            reply_preview = original.body[:120]
+
     msg = await chat_service.save_message(
         session,
         chat_id=chat_id,
@@ -47,6 +58,7 @@ async def relay_from_telegram(
         body=message.text,
         source=MessageSource.telegram,
         tg_message_id=message.message_id,
+        reply_to_id=reply_to_id,
     )
     await session.commit()
 
@@ -57,6 +69,8 @@ async def relay_from_telegram(
         body=message.text,
         source="telegram",
         tg_message_id=message.message_id,
+        reply_to_id=reply_to_id,
+        reply_preview=reply_preview,
         created_at=msg.created_at.isoformat(),
     )
     await bus.publish_message(event)
@@ -82,8 +96,15 @@ async def chat_relay_subscriber(bot) -> None:
         if recipient and recipient.telegram_id:
             name = sender.display_name if sender else "Собеседник"
             try:
-                await bot.send_message(
+                sent = await bot.send_message(
                     recipient.telegram_id, f"💬 {name}: {event.body}"
                 )
             except Exception:
-                pass
+                continue
+            # Сохраняем tg_message_id доставленного сообщения обратно в БД,
+            # чтобы reply в Telegram на это сообщение сопоставился с записью.
+            async with async_session_factory() as session:
+                await chat_service.set_tg_message_id(
+                    session, event.message_id, sent.message_id
+                )
+                await session.commit()

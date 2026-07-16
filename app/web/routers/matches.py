@@ -1,23 +1,17 @@
-from fastapi import APIRouter, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import APIRouter, Form
+from fastapi.responses import RedirectResponse
 
 from app.models.chat import ChatContext
-from app.services import chat_service, match_service, request_service
-from app.services.request_service import RequestError
+from app.services import chat_service
 from app.web.dependencies import CurrentUser, SessionDep
-from app.web.templating import templates
 
 router = APIRouter()
 
 
-@router.get("/matches", response_class=HTMLResponse)
-async def matches_page(request: Request, user: CurrentUser, session: SessionDep):
-    candidates = await match_service.find_mutual_matches(session, user.id)
-    return templates.TemplateResponse(
-        request,
-        "matches.html",
-        {"user": user, "candidates": candidates},
-    )
+@router.get("/matches")
+async def matches_page():
+    """Вкладка «Пары» удалена — доска теперь персонально ранжирована."""
+    return RedirectResponse(url="/board", status_code=301)
 
 
 @router.post("/matches/connect")
@@ -26,9 +20,9 @@ async def connect_match(
     session: SessionDep,
     partner_id: int = Form(...),
 ):
-    """Начать общение с подобранной парой: создаём чат напрямую."""
+    """Совместимость со старыми ссылками: создаём чат и ведём в него."""
     if partner_id == user.id:
-        return RedirectResponse(url="/matches", status_code=303)
+        return RedirectResponse(url="/board", status_code=303)
     chat = await chat_service.get_or_create_chat(
         session, user.id, partner_id, context_type=ChatContext.match
     )
