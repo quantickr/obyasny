@@ -56,7 +56,7 @@
             {% for ut in can_teach %}
             <div>
                 <span class="text-sm bg-green-50 text-green-800 px-2 py-1 rounded inline-block break-words">
-                    {{ ut.topic.name }}{% if ut.level %} · {{ ut.level }}/10{% endif %} · 🍫{{ ut.price or 1 }}
+                    {{ ut.topic.name }}{% if ut.level %} · {{ ut.level }}/10{% endif %} · {% if ut.price == 0 %}🆓 бесплатно{% else %}🍫{{ ut.price or 1 }}{% endif %}
                 </span>
                 {% if ut.details %}
                 <p class="text-xs text-slate-500 mt-0.5 break-words whitespace-pre-wrap">{{ ut.details | censor }}</p>

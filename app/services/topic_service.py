@@ -57,10 +57,11 @@ async def search_topics(
 
 
 def _clamp_price(price: int | None) -> int | None:
-    """Цена в шоколадках: диапазон 1..3. None остаётся None (трактуется как 1)."""
+    """Цена в шоколадках: диапазон 0..3 (0 = бесплатно). None остаётся None
+    (трактуется как 1) — обратная совместимость со старыми темами без цены."""
     if price is None:
         return None
-    return min(max(price, 1), 3)
+    return min(max(price, 0), 3)
 
 
 async def set_user_topic(
@@ -151,7 +152,8 @@ async def update_user_topic_price(
     user_topic_id: int,
     price: int | None,
 ) -> UserTopic | None:
-    """Меняет цену (в шоколадках) у своей темы «могу объяснить». Диапазон 1..3.
+    """Меняет цену (в шоколадках) у своей темы «могу объяснить». Диапазон 0..3
+    (0 = бесплатно).
 
     price=None очищает цену (трактуется как 1). Применяется только к темам
     kind == can_teach; для остальных изменение игнорируется.

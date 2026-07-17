@@ -12,6 +12,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    SmallInteger,
     Text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -65,6 +66,10 @@ class Request(Base, TimestampMixin):
     offer_topic_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("topics.id", ondelete="SET NULL"), nullable=True
     )
+    # Цена в шоколадках, зафиксированная при создании заявки (из темы
+    # объясняющего). 0 → бесплатное объяснение: ничего не списывается,
+    # не возвращается и не начисляется.
+    price: Mapped[int] = mapped_column(SmallInteger, default=1, nullable=False)
     status: Mapped[RequestStatus] = mapped_column(
         Enum(RequestStatus, name="request_status"),
         default=RequestStatus.pending,

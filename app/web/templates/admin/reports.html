@@ -87,7 +87,7 @@
                         <p class="text-xs text-slate-500 mb-1">Может объяснить</p>
                         {% for ut in t.can_teach %}
                         <div class="flex items-center justify-between gap-2 py-0.5">
-                            <span class="text-xs break-words">{{ ut.topic.name }}{% if ut.level %} · ур. {{ ut.level }}{% endif %} · 🍫{{ ut.price or 1 }}</span>
+                            <span class="text-xs break-words">{{ ut.topic.name }}{% if ut.level %} · ур. {{ ut.level }}{% endif %} · {% if ut.price == 0 %}🆓 бесплатно{% else %}🍫{{ ut.price or 1 }}{% endif %}</span>
                             {% if user.is_superadmin or user.can_edit_profiles %}
                             <form method="post" action="/admin/users/{{ r.reported_user_id }}/topics/{{ ut.id }}/remove"
                                   onsubmit="return confirm('Удалить тему?');">

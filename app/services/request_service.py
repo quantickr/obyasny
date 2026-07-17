@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 from app.core.profanity import ProfanityError, ensure_clean
 from app.models.chocolate import ChocolateReason
 from app.models.request import OfferType, Request, RequestStatus
-from app.models.topic import Topic
+from app.models.topic import Topic, TopicKind, UserTopic
 from app.models.user import User
 from app.services import chat_service, chocolate_service
 from app.services.chocolate_service import NotEnoughChocolates
@@ -23,6 +23,27 @@ _BLOCK_DURATIONS: dict[str, timedelta | None] = {
 
 class RequestError(Exception):
     pass
+
+
+async def _teach_price(
+    session: AsyncSession, receiver_id: int, topic_id: int
+) -> int:
+    """Цена в шоколадках за объяснение темы `topic_id` пользователем `receiver_id`.
+
+    Берётся из его темы «могу объяснить» (kind == can_teach). Диапазон 0..3,
+    где 0 — бесплатно. Тема без цены (price is None) или отсутствует → 1
+    (обратная совместимость).
+    """
+    ut = await session.scalar(
+        select(UserTopic).where(
+            UserTopic.user_id == receiver_id,
+            UserTopic.topic_id == topic_id,
+            UserTopic.kind == TopicKind.can_teach,
+        )
+    )
+    if ut is None or ut.price is None:
+        return 1
+    return ut.price
 
 
 async def create_request(
@@ -83,6 +104,11 @@ async def create_request(
             "Пользователь временно не принимает от вас заявки"
         )
 
+    # Цена фиксируется в заявке в момент создания (из темы объясняющего),
+    # чтобы возврат/награда позже совпали со списанием, даже если учитель
+    # поменяет цену темы.
+    price = await _teach_price(session, receiver_id, topic_id)
+
     req = Request(
         sender_id=sender_id,
         receiver_id=receiver_id,
@@ -91,19 +117,21 @@ async def create_request(
         offer_type=offer_type,
         offer_topic_id=offer_topic_id,
         status=RequestStatus.pending,
+        price=price,
     )
     session.add(req)
     await session.flush()
 
-    # Экономика: заявка «за шоколадки» списывает 1 шоколадку у отправителя
-    # сразу при отправке. Возврат — при отказе/отмене; при завершении задачи
-    # шоколадка достаётся объясняющему.
-    if offer_type == OfferType.chocolates:
+    # Экономика: заявка «за шоколадки» списывает цену темы у отправителя сразу
+    # при отправке. Возврат — при отказе/отмене; при завершении задачи шоколадки
+    # достаются объясняющему. При цене 0 (бесплатно) ничего не списывается и
+    # баланс не проверяется.
+    if offer_type == OfferType.chocolates and price > 0:
         try:
             await chocolate_service.spend(
                 session,
                 user_id=sender_id,
-                amount=1,
+                amount=price,
                 reason=ChocolateReason.spend,
                 ref_type="request",
                 ref_id=req.id,
@@ -277,12 +305,16 @@ async def accept_request(
 
 
 async def _refund_if_chocolates(session: AsyncSession, req: Request) -> None:
-    """Возвращает списанную шоколадку отправителю при отказе/отмене заявки."""
-    if req.offer_type == OfferType.chocolates:
+    """Возвращает списанные шоколадки отправителю при отказе/отмене заявки.
+
+    Сумма — цена, зафиксированная в заявке. При цене 0 (бесплатно) возвращать
+    нечего.
+    """
+    if req.offer_type == OfferType.chocolates and req.price > 0:
         await chocolate_service.award(
             session,
             to_user_id=req.sender_id,
-            amount=1,
+            amount=req.price,
             reason=ChocolateReason.refund,
             ref_type="request",
             ref_id=req.id,
@@ -343,7 +375,8 @@ async def toggle_done(
 
     Только участник заявки (sender/receiver) может отметить. Когда оба отметили
     → status=completed, чат становится завершённым, объясняющему (receiver)
-    начисляется 1 шоколадка (та, что списалась у отправителя при создании).
+    начисляются шоколадки по цене заявки (те, что списались у отправителя при
+    создании). При цене 0 — бесплатно, начисления нет.
     """
     req = await session.get(Request, request_id)
     if not req:
@@ -363,12 +396,13 @@ async def toggle_done(
         req.completed_at = datetime.now(timezone.utc)
         if req.chat_id is not None:
             await chat_service.complete_chat(session, req.chat_id)
-        # Награда объясняющему (receiver) — только для оплаты шоколадками.
-        if req.offer_type == OfferType.chocolates:
+        # Награда объясняющему (receiver) — только для оплаты шоколадками, в
+        # размере зафиксированной цены заявки. При цене 0 (бесплатно) награды нет.
+        if req.offer_type == OfferType.chocolates and req.price > 0:
             await chocolate_service.award(
                 session,
                 to_user_id=req.receiver_id,
-                amount=1,
+                amount=req.price,
                 reason=ChocolateReason.explanation,
                 from_user_id=req.sender_id,
                 ref_type="request",

@@ -123,7 +123,7 @@
                 <p class="text-sm text-slate-500 mb-1">Может объяснить</p>
                 {% for ut in can_teach %}
                 <div class="flex items-center justify-between gap-2 text-sm py-1">
-                    <span class="break-words">{{ ut.topic.name }}{% if ut.level %} · ур. {{ ut.level }}{% endif %} · 🍫{{ ut.price or 1 }}</span>
+                    <span class="break-words">{{ ut.topic.name }}{% if ut.level %} · ур. {{ ut.level }}{% endif %} · {% if ut.price == 0 %}🆓 бесплатно{% else %}🍫{{ ut.price or 1 }}{% endif %}</span>
                     <form method="post" action="/admin/users/{{ target.id }}/topics/{{ ut.id }}/remove"
                           onsubmit="return confirm('Удалить тему?');">
                         <button class="text-xs text-red-500 hover:text-red-700">удалить</button>
@@ -151,8 +151,8 @@
                     <option value="wants_learn">хочет узнать</option>
                 </select>
                 <input type="number" name="level" min="1" max="10" placeholder="ур." class="w-16 border border-slate-300 rounded px-2 py-1 text-sm">
-                <select name="price" title="Цена в шоколадках (для «может объяснить»)" class="border border-slate-300 rounded px-2 py-1 text-sm">
-                    {% for n in range(1, 4) %}<option value="{{ n }}">🍫{{ n }}</option>{% endfor %}
+                <select name="price" title="Цена в шоколадках (для «может объяснить», 0 — бесплатно)" class="border border-slate-300 rounded px-2 py-1 text-sm">
+                    {% for n in range(0, 4) %}<option value="{{ n }}" {% if n == 1 %}selected{% endif %}>{% if n == 0 %}🆓 бесплатно{% else %}🍫{{ n }}{% endif %}</option>{% endfor %}
                 </select>
                 <button class="text-sm bg-slate-700 text-white px-3 py-1 rounded hover:bg-slate-800">Добавить</button>
             </form>
