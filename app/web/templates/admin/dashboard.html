@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Админ — Объясни!{% endblock %}
+{% block content %}
+{% set ctx_ru = {'board': 'с доски', 'profile': 'из профиля', 'chat': 'из чата'} %}
+<h1 class="text-xl font-bold mb-4">Админ-панель</h1>
+
+<div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+    <div class="bg-white p-4 rounded-xl border border-slate-200">
+        <p class="text-2xl font-bold">{{ users_total }}</p>
+        <p class="text-xs text-slate-500">Пользователей</p>
+    </div>
+    <a href="/admin/reports" class="bg-white p-4 rounded-xl border border-slate-200 hover:border-brand-300">
+        <p class="text-2xl font-bold {% if open_reports %}text-red-600{% endif %}">{{ open_reports }}</p>
+        <p class="text-xs text-slate-500">Открытых жалоб</p>
+    </a>
+    <a href="/admin/users" class="bg-white p-4 rounded-xl border border-slate-200 hover:border-brand-300">
+        <p class="text-2xl font-bold">→</p>
+        <p class="text-xs text-slate-500">Пользователи</p>
+    </a>
+</div>
+
+<h2 class="font-semibold text-slate-600 mb-2">Последние жалобы</h2>
+<div class="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
+    {% for r in recent %}
+    <div class="p-4 flex items-start justify-between gap-3">
+        <div class="min-w-0">
+            <p class="text-sm">
+                <a href="/u/{{ r.reporter_id }}" class="font-semibold text-brand-600">{{ r.reporter.display_name if r.reporter else '—' }}</a>
+                → на
+                <a href="/u/{{ r.reported_user_id }}" class="font-semibold text-red-600">{{ r.reported.display_name if r.reported else '—' }}</a>
+                <span class="text-xs text-slate-400">({{ ctx_ru.get(r.context.value, r.context.value) }})</span>
+            </p>
+            {% if r.reason %}<p class="text-sm text-slate-600 break-words whitespace-pre-wrap mt-1">{{ r.reason }}</p>{% endif %}
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+            <form method="post" action="/admin/reports/{{ r.id }}/resolve">
+                <button class="text-xs bg-emerald-600 text-white px-2 py-1 rounded hover:bg-emerald-700">Решено</button>
+            </form>
+            <form method="post" action="/admin/reports/{{ r.id }}/dismiss">
+                <button class="text-xs bg-slate-200 text-slate-700 px-2 py-1 rounded hover:bg-slate-300">Отклонить</button>
+            </form>
+        </div>
+    </div>
+    {% else %}
+    <p class="p-4 text-sm text-slate-400">Открытых жалоб нет</p>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -5,14 +5,24 @@ from fastapi import FastAPI, Request
 from fastapi.responses import PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
+from app.core.config import settings
+from app.core.database import async_session_factory
 from app.core.logging import setup_logging
-from app.web.dependencies import RequireEmailVerification, RequireLoginRedirect
+from app.services import user_service
+from app.web.dependencies import (
+    RequireAdminAccess,
+    RequireBanned,
+    RequireEmailVerification,
+    RequireLoginRedirect,
+)
 from app.web.routers import (
+    admin,
     auth,
     chat,
     listings,
     matches,
     profile,
+    reports,
     requests,
     search,
     topics,
@@ -23,10 +33,23 @@ BASE_DIR = Path(__file__).resolve().parent
 UPLOAD_DIR = Path("/app/uploads")
 
 
+async def _ensure_admin() -> None:
+    """Назначает is_admin пользователю с email из настроек (если задан)."""
+    email = settings.admin_email.strip().lower()
+    if not email:
+        return
+    async with async_session_factory() as session:
+        user = await user_service.get_by_email(session, email)
+        if user is not None and not user.is_admin:
+            user.is_admin = True
+            await session.commit()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     setup_logging()
     (UPLOAD_DIR / "avatars").mkdir(parents=True, exist_ok=True)
+    await _ensure_admin()
     yield
 
 
@@ -61,6 +84,16 @@ async def require_email_verification_handler(
     return RedirectResponse(url="/verify-email", status_code=303)
 
 
+@app.exception_handler(RequireBanned)
+async def require_banned_handler(request: Request, exc: RequireBanned):
+    return RedirectResponse(url="/banned", status_code=303)
+
+
+@app.exception_handler(RequireAdminAccess)
+async def require_admin_handler(request: Request, exc: RequireAdminAccess):
+    return RedirectResponse(url="/", status_code=303)
+
+
 app.include_router(auth.router)
 app.include_router(profile.router)
 app.include_router(search.router)
@@ -70,6 +103,17 @@ app.include_router(listings.router)
 app.include_router(matches.router)
 app.include_router(topics.router)
 app.include_router(universities.router)
+app.include_router(reports.router)
+app.include_router(admin.router)
+
+
+@app.get("/banned", response_class=PlainTextResponse)
+async def banned_page():
+    """Страница-заглушка для забаненных пользователей."""
+    return (
+        "Ваш аккаунт заблокирован администратором за нарушение правил.\n"
+        "Если это ошибка — напишите в поддержку."
+    )
 
 
 @app.get("/healthz")

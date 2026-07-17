@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.profanity import censor
 from app.models.chat import Chat, ChatContext, Message, MessageSource
+from app.models.chat_block import ChatBlock
 
 
 def _order_pair(a: int, b: int) -> tuple[int, int]:
@@ -72,6 +73,61 @@ async def hide_chat(session: AsyncSession, chat_id: int, user_id: int) -> None:
     await session.flush()
 
 
+async def block_user(
+    session: AsyncSession, blocker_id: int, blocked_id: int
+) -> None:
+    """Односторонне блокирует blocked_id «для себя» (blocker_id). Идемпотентно."""
+    if blocker_id == blocked_id:
+        return
+    existing = await session.scalar(
+        select(ChatBlock).where(
+            ChatBlock.blocker_id == blocker_id,
+            ChatBlock.blocked_id == blocked_id,
+        )
+    )
+    if existing is not None:
+        return
+    session.add(ChatBlock(blocker_id=blocker_id, blocked_id=blocked_id))
+    await session.flush()
+
+
+async def unblock_user(
+    session: AsyncSession, blocker_id: int, blocked_id: int
+) -> None:
+    block = await session.scalar(
+        select(ChatBlock).where(
+            ChatBlock.blocker_id == blocker_id,
+            ChatBlock.blocked_id == blocked_id,
+        )
+    )
+    if block is not None:
+        await session.delete(block)
+        await session.flush()
+
+
+async def is_blocked(
+    session: AsyncSession, blocker_id: int, blocked_id: int
+) -> bool:
+    """True, если blocker_id заблокировал blocked_id для себя."""
+    block = await session.scalar(
+        select(ChatBlock.id).where(
+            ChatBlock.blocker_id == blocker_id,
+            ChatBlock.blocked_id == blocked_id,
+        )
+    )
+    return block is not None
+
+
+async def blocked_ids(session: AsyncSession, blocker_id: int) -> set[int]:
+    """ID пользователей, которых blocker_id заблокировал для себя."""
+    rows = await session.scalars(
+        select(ChatBlock.blocked_id).where(
+            ChatBlock.blocker_id == blocker_id
+        )
+    )
+    return set(rows)
+
+
 async def complete_chat(session: AsyncSession, chat_id: int) -> None:
     """Помечает чат завершённым (read-only, серый, вниз списка)."""
     chat = await session.get(Chat, chat_id)
@@ -113,7 +169,14 @@ async def list_user_chats(session: AsyncSession, user_id: int) -> list[Chat]:
         # completed_at IS NULL сортируется как «меньше» → завершённые уходят вниз.
         .order_by(Chat.completed_at.isnot(None), Chat.id.desc())
     )
-    return list(await session.scalars(stmt))
+    chats = list(await session.scalars(stmt))
+    # Личная блокировка «для себя»: прячем чаты с заблокированными собеседниками.
+    blocked = await blocked_ids(session, user_id)
+    if blocked:
+        chats = [
+            c for c in chats if other_participant(c, user_id) not in blocked
+        ]
+    return chats
 
 
 async def save_message(

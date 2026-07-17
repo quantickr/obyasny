@@ -3,9 +3,11 @@
 
 from app.models.base import Base
 from app.models.chat import Chat, Message
+from app.models.chat_block import ChatBlock
 from app.models.chocolate import ChocolateTransaction
 from app.models.listing import Listing, ListingResponse
 from app.models.match import Match
+from app.models.report import Report
 from app.models.request import Request
 from app.models.topic import Topic, UserTopic
 from app.models.user import User
@@ -21,5 +23,7 @@ __all__ = [
     "Match",
     "Chat",
     "Message",
+    "ChatBlock",
+    "Report",
     "ChocolateTransaction",
 ]

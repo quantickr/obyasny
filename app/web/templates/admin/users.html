@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Пользователи — Админ{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between mb-4">
+    <h1 class="text-xl font-bold">Пользователи</h1>
+    <a href="/admin" class="text-sm text-slate-500 hover:text-brand-600">← В админку</a>
+</div>
+
+<form method="get" action="/admin/users" class="mb-4 flex gap-2">
+    <input type="text" name="q" value="{{ q }}" placeholder="Имя или email"
+           class="flex-1 border border-slate-300 rounded-md px-3 py-2 text-sm">
+    <button class="bg-brand-500 text-white px-4 py-2 rounded-md text-sm hover:bg-brand-600">Найти</button>
+</form>
+
+<div class="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
+    {% for u in users %}
+    <div class="p-4 flex items-center justify-between gap-3">
+        <div class="min-w-0">
+            <p class="text-sm font-semibold break-words">
+                <a href="/u/{{ u.id }}" class="text-brand-600 hover:text-brand-700">{{ u.display_name }}</a>
+                {% if u.is_admin %}<span class="text-[11px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">admin</span>{% endif %}
+                {% if u.is_banned %}<span class="text-[11px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded">бан</span>{% endif %}
+            </p>
+            <p class="text-xs text-slate-400 break-words">#{{ u.id }}{% if u.email %} · {{ u.email }}{% endif %}</p>
+        </div>
+        <div class="shrink-0">
+            {% if u.is_banned %}
+            <form method="post" action="/admin/users/{{ u.id }}/unban">
+                <button class="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded hover:bg-emerald-700">Разбанить</button>
+            </form>
+            {% elif not u.is_admin %}
+            <form method="post" action="/admin/users/{{ u.id }}/ban"
+                  onsubmit="return confirm('Забанить {{ u.display_name }}?');">
+                <button class="text-xs bg-red-600 text-white px-3 py-1.5 rounded hover:bg-red-700">Бан</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <p class="p-4 text-sm text-slate-400">Никого не найдено</p>
+    {% endfor %}
+</div>
+{% endblock %}

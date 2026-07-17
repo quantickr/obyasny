@@ -66,6 +66,38 @@
             </div>
         </div>
         <div class="flex items-center gap-2 shrink-0">
+            {% if partner %}
+            <details class="relative">
+                <summary class="text-slate-400 hover:text-slate-600 cursor-pointer select-none list-none text-lg leading-none px-1" title="Ещё">⋯</summary>
+                <div class="absolute right-0 z-10 mt-2 w-64 bg-white border border-slate-200 rounded-lg shadow-lg p-3 space-y-3">
+                    {% if blocked %}
+                    <form method="post" action="/chat/{{ chat.id }}/unblock">
+                        <button class="w-full text-left text-sm bg-emerald-100 text-emerald-700 hover:bg-emerald-200 px-3 py-2 rounded-md">
+                            Разблокировать {{ partner.display_name }}
+                        </button>
+                    </form>
+                    {% else %}
+                    <form method="post" action="/chat/{{ chat.id }}/block"
+                          onsubmit="return confirm('Заблокировать {{ partner.display_name }}? Чат скроется у вас, уведомления перестанут приходить.');">
+                        <button class="w-full text-left text-sm bg-slate-100 text-slate-700 hover:bg-slate-200 px-3 py-2 rounded-md">
+                            Заблокировать {{ partner.display_name }}
+                        </button>
+                    </form>
+                    {% endif %}
+                    <div class="border-t border-slate-100 pt-3">
+                        <form method="post" action="/report" class="space-y-2">
+                            <input type="hidden" name="reported_user_id" value="{{ partner.id }}">
+                            <input type="hidden" name="context" value="chat">
+                            <input type="hidden" name="chat_id" value="{{ chat.id }}">
+                            <input type="hidden" name="next_url" value="/chat/{{ chat.id }}">
+                            <textarea name="reason" rows="2" placeholder="Причина жалобы (необязательно)"
+                                      class="w-full border border-slate-300 rounded-md px-2 py-1.5 text-xs"></textarea>
+                            <button class="w-full text-xs bg-red-600 text-white px-3 py-1.5 rounded-md hover:bg-red-700">Пожаловаться</button>
+                        </form>
+                    </div>
+                </div>
+            </details>
+            {% endif %}
             {% if completed %}
             <span class="text-xs font-medium text-slate-500">✓ Завершено</span>
             <form method="post" action="/chat/{{ chat.id }}/hide"

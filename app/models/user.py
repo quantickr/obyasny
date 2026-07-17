@@ -91,6 +91,15 @@ class User(Base, TimestampMixin):
         Boolean, default=False, nullable=False
     )
 
+    # Администратор (доступ к /admin). Назначается по email из настроек.
+    is_admin: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    # Забанен админом: жёсткая блокировка входа на сайт.
+    is_banned: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+
     user_topics: Mapped[list["UserTopic"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )

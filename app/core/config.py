@@ -27,6 +27,9 @@ class Settings(BaseSettings):
 
     domain: str = "example.com"
 
+    # Email пользователя, которому при старте выдаётся is_admin (доступ к /admin).
+    admin_email: str = ""
+
     # Отправка почты (SMTP). Timeweb: smtp.timeweb.ru, SSL 465,
     # логин = адрес ящика, пароль = пароль ящика.
     smtp_host: str = "smtp.timeweb.ru"

@@ -37,6 +37,14 @@ class RequireEmailVerification(Exception):
     """У пользователя есть email, но он не подтверждён — жёсткая блокировка."""
 
 
+class RequireBanned(Exception):
+    """Пользователь забанен админом — жёсткая блокировка входа."""
+
+
+class RequireAdminAccess(Exception):
+    """Требуется доступ администратора."""
+
+
 async def get_current_user_allow_unverified(
     user: CurrentUserOptional,
 ) -> User:
@@ -61,6 +69,9 @@ async def get_current_user(
 ) -> User:
     if user is None:
         raise RequireLoginRedirect()
+    # Забаненного пользователя не пускаем никуда, кроме страницы /banned.
+    if user.is_banned:
+        raise RequireBanned()
     # Жёсткая блокировка: email указан, но не подтверждён.
     # Telegram-аккаунты (email=None) не блокируются.
     if user.email is not None and not user.email_verified:
@@ -74,3 +85,13 @@ async def get_current_user(
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+async def get_current_admin(user: CurrentUser) -> User:
+    """Требует прав администратора. Иначе — RequireAdminAccess."""
+    if not user.is_admin:
+        raise RequireAdminAccess()
+    return user
+
+
+CurrentAdmin = Annotated[User, Depends(get_current_admin)]

@@ -76,6 +76,9 @@
                 Чаты
                 <span id="badge-messages" class="hidden min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[11px] leading-[18px] text-center"></span>
             </a>
+            {% if user.is_admin %}
+            <a href="/admin" class="text-slate-600 hover:text-brand-600 transition-colors">Админ</a>
+            {% endif %}
             <div class="ml-auto flex items-center gap-3">
                 <a href="/profile" class="flex items-center gap-2 text-slate-700 hover:text-brand-600 transition-colors">
                     {% if user.avatar_url %}

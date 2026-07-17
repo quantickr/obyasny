@@ -27,6 +27,20 @@
             </div>
             {% if user and profile_user.id == user.id %}
             <span class="ml-auto text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded shrink-0">Это вы</span>
+            {% elif user %}
+            <details class="ml-auto relative shrink-0">
+                <summary class="text-xs text-slate-400 hover:text-red-600 cursor-pointer select-none list-none">Пожаловаться</summary>
+                <div class="absolute right-0 z-10 mt-2 w-64 bg-white border border-slate-200 rounded-lg shadow-lg p-3">
+                    <form method="post" action="/report" class="space-y-2">
+                        <input type="hidden" name="reported_user_id" value="{{ profile_user.id }}">
+                        <input type="hidden" name="context" value="profile">
+                        <input type="hidden" name="next_url" value="/u/{{ profile_user.id }}">
+                        <textarea name="reason" rows="2" placeholder="Причина жалобы (необязательно)"
+                                  class="w-full border border-slate-300 rounded-md px-2 py-1.5 text-xs"></textarea>
+                        <button class="w-full text-xs bg-red-600 text-white px-3 py-1.5 rounded-md hover:bg-red-700">Отправить жалобу</button>
+                    </form>
+                </div>
+            </details>
             {% endif %}
         </div>
 

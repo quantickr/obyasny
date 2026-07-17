@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -46,6 +46,39 @@ async def get_by_telegram_id(
     return await session.scalar(
         select(User).where(User.telegram_id == telegram_id)
     )
+
+
+async def set_banned(
+    session: AsyncSession, user_id: int, banned: bool
+) -> User | None:
+    """Бан/разбан пользователя админом."""
+    user = await session.get(User, user_id)
+    if user is None:
+        return None
+    user.is_banned = banned
+    await session.flush()
+    return user
+
+
+async def list_users(
+    session: AsyncSession, query: str | None = None, limit: int = 100
+) -> list[User]:
+    """Список пользователей для админки. query фильтрует по имени/email."""
+    stmt = select(User)
+    if query:
+        pattern = f"%{query.strip().lower()}%"
+        stmt = stmt.where(
+            or_(
+                func.lower(User.display_name).like(pattern),
+                func.lower(User.email).like(pattern),
+            )
+        )
+    stmt = stmt.order_by(User.id.desc()).limit(limit)
+    return list(await session.scalars(stmt))
+
+
+async def count_users(session: AsyncSession) -> int:
+    return int(await session.scalar(select(func.count(User.id))) or 0)
 
 
 async def register_email(

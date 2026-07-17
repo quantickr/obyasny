@@ -101,6 +101,8 @@ async def chat_page(
                 req.receiver_done if user.id == req.sender_id else req.sender_done
             )
 
+    blocked = await chat_service.is_blocked(session, user.id, partner_id)
+
     chats, partners, unread, last = await _chat_sidebar(session, user)
     return templates.TemplateResponse(
         request,
@@ -118,6 +120,7 @@ async def chat_page(
             "my_done": my_done,
             "partner_done": partner_done,
             "completed": chat.completed_at is not None,
+            "blocked": blocked,
         },
     )
 
@@ -142,6 +145,28 @@ async def chat_hide(chat_id: int, user: CurrentUser, session: SessionDep):
     await chat_service.hide_chat(session, chat_id, user.id)
     await session.commit()
     return RedirectResponse(url="/chats", status_code=303)
+
+
+@router.post("/chat/{chat_id}/block")
+async def chat_block(chat_id: int, user: CurrentUser, session: SessionDep):
+    """Заблокировать собеседника «для себя»: чат прячется, TG-уведомления гаснут."""
+    chat = await chat_service.get_chat_for_user(session, chat_id, user.id)
+    if chat is not None:
+        partner_id = chat_service.other_participant(chat, user.id)
+        await chat_service.block_user(session, user.id, partner_id)
+        await session.commit()
+    return RedirectResponse(url="/chats", status_code=303)
+
+
+@router.post("/chat/{chat_id}/unblock")
+async def chat_unblock(chat_id: int, user: CurrentUser, session: SessionDep):
+    """Разблокировать собеседника."""
+    chat = await chat_service.get_chat_for_user(session, chat_id, user.id)
+    if chat is not None:
+        partner_id = chat_service.other_participant(chat, user.id)
+        await chat_service.unblock_user(session, user.id, partner_id)
+        await session.commit()
+    return RedirectResponse(url=f"/chat/{chat_id}", status_code=303)
 
 
 @router.websocket("/ws/chat/{chat_id}")

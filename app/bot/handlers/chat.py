@@ -241,6 +241,12 @@ async def chat_relay_subscriber(bot) -> None:
             )
             recipient = await user_service.get_by_id(session, recipient_id)
             sender = await user_service.get_by_id(session, event.sender_id)
+            # Получатель заблокировал отправителя «для себя» — не уведомляем.
+            blocked = await chat_service.is_blocked(
+                session, recipient_id, event.sender_id
+            )
+        if blocked:
+            continue
         if not (recipient and recipient.telegram_id):
             continue
         # Получатель прямо сейчас смотрит этот чат на сайте — не беспокоим в TG.
