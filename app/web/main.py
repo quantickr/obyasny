@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.core.logging import setup_logging
@@ -75,3 +75,13 @@ app.include_router(universities.router)
 @app.get("/healthz")
 async def healthz():
     return {"status": "ok"}
+
+
+@app.get(
+    "/mailru-verification5ca00a8e5eb37295.html",
+    response_class=PlainTextResponse,
+    include_in_schema=False,
+)
+async def mailru_domain_verification():
+    """Подтверждение владения доменом obyasny.ru для postmaster.mail.ru."""
+    return "mailru-verification: 5ca00a8e5eb37295"
