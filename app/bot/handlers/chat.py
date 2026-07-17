@@ -133,18 +133,23 @@ async def _relay_to_web(
         tg_message_id=message.message_id,
         reply_to_id=reply_to_id,
     )
+    # Снимаем поля до commit: после него объект может быть expired.
+    # body берём из msg — это цензурированная версия из save_message.
+    msg_id = msg.id
+    clean_body = msg.body
+    created_at = msg.created_at.isoformat()
     await session.commit()
 
     event = ChatEvent(
         chat_id=chat_id,
-        message_id=msg.id,
+        message_id=msg_id,
         sender_id=sender_id,
-        body=message.text,
+        body=clean_body,
         source="telegram",
         tg_message_id=message.message_id,
         reply_to_id=reply_to_id,
         reply_preview=reply_preview,
-        created_at=msg.created_at.isoformat(),
+        created_at=created_at,
     )
     await bus.publish_message(event)
 

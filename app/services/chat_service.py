@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.profanity import censor
 from app.models.chat import Chat, ChatContext, Message, MessageSource
 
 
@@ -124,10 +125,12 @@ async def save_message(
     tg_message_id: int | None = None,
     reply_to_id: int | None = None,
 ) -> Message:
+    # Модерация: маскируем мат/угрозы на '*' (не отклоняем, чтобы диалог
+    # не рвался). Единая точка для веба и Telegram-бота.
     msg = Message(
         chat_id=chat_id,
         sender_id=sender_id,
-        body=body,
+        body=censor(body),
         source=source,
         tg_message_id=tg_message_id,
         reply_to_id=reply_to_id,

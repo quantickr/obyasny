@@ -172,14 +172,18 @@ async def chat_ws(websocket: WebSocket, chat_id: int):
                     body=body,
                     source=MessageSource.web,
                 )
+                # Снимаем поля до commit: после него объект может быть expired.
+                msg_id = msg.id
+                clean_body = msg.body  # цензурированная версия из save_message
+                created_at = msg.created_at.isoformat()
                 await session.commit()
                 event = ChatEvent(
                     chat_id=chat_id,
-                    message_id=msg.id,
+                    message_id=msg_id,
                     sender_id=user_id,
-                    body=body,
+                    body=clean_body,
                     source="web",
-                    created_at=msg.created_at.isoformat(),
+                    created_at=created_at,
                 )
             # Публикуем в шину: web-listener разошлёт по WS, bot доставит в TG.
             await bus.publish_message(event)
