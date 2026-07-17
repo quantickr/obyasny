@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import Annotated
 
 from fastapi import Depends, Request
@@ -70,8 +71,17 @@ async def get_current_user(
     if user is None:
         raise RequireLoginRedirect()
     # Забаненного пользователя не пускаем никуда, кроме страницы /banned.
+    # Срочный бан автоснимается по истечении banned_until (ленивая проверка).
     if user.is_banned:
-        raise RequireBanned()
+        if (
+            user.banned_until is not None
+            and user.banned_until <= datetime.now(timezone.utc)
+        ):
+            user.is_banned = False
+            user.banned_until = None
+            await session.commit()
+        else:
+            raise RequireBanned()
     # Жёсткая блокировка: email указан, но не подтверждён.
     # Telegram-аккаунты (email=None) не блокируются.
     if user.email is not None and not user.email_verified:

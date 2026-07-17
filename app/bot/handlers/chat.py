@@ -130,15 +130,23 @@ async def _relay_to_web(
     reply_preview: str | None,
 ) -> None:
     """Сохраняет сообщение из Telegram и публикует в шину (дойдёт на сайт)."""
-    msg = await chat_service.save_message(
-        session,
-        chat_id=chat_id,
-        sender_id=sender_id,
-        body=message.text,
-        source=MessageSource.telegram,
-        tg_message_id=message.message_id,
-        reply_to_id=reply_to_id,
-    )
+    try:
+        msg = await chat_service.save_message(
+            session,
+            chat_id=chat_id,
+            sender_id=sender_id,
+            body=message.text,
+            source=MessageSource.telegram,
+            tg_message_id=message.message_id,
+            reply_to_id=reply_to_id,
+        )
+    except chat_service.MutedError as e:
+        until = e.until.strftime("%d.%m.%Y %H:%M") if e.until else ""
+        await message.answer(
+            "🔇 Вы временно не можете писать в чаты"
+            + (f" (до {until} UTC)." if until else ".")
+        )
+        return
     # Снимаем поля до commit: после него объект может быть expired.
     # body берём из msg — это цензурированная версия из save_message.
     msg_id = msg.id

@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -51,11 +53,111 @@ async def get_by_telegram_id(
 async def set_banned(
     session: AsyncSession, user_id: int, banned: bool
 ) -> User | None:
-    """Бан/разбан пользователя админом."""
+    """Бан/разбан пользователя админом (бессрочный, совместимость)."""
     user = await session.get(User, user_id)
     if user is None:
         return None
     user.is_banned = banned
+    if not banned:
+        user.banned_until = None
+    await session.flush()
+    return user
+
+
+# --- Срочные наказания (бан / мут / блокировка правки профиля) ---
+
+
+def _active(until: datetime | None) -> bool:
+    """Ограничение активно, если срок задан и ещё не наступил."""
+    return until is not None and until > datetime.now(timezone.utc)
+
+
+def is_muted(user: User) -> bool:
+    return _active(user.muted_until)
+
+
+def is_profile_locked(user: User) -> bool:
+    return _active(user.profile_locked_until)
+
+
+async def set_ban(
+    session: AsyncSession, user_id: int, until: datetime | None
+) -> User | None:
+    """Бан со сроком. until=None → бессрочный бан."""
+    user = await session.get(User, user_id)
+    if user is None:
+        return None
+    user.is_banned = True
+    user.banned_until = until
+    await session.flush()
+    return user
+
+
+async def clear_ban(session: AsyncSession, user_id: int) -> User | None:
+    user = await session.get(User, user_id)
+    if user is None:
+        return None
+    user.is_banned = False
+    user.banned_until = None
+    await session.flush()
+    return user
+
+
+async def set_mute(
+    session: AsyncSession, user_id: int, until: datetime | None
+) -> User | None:
+    """Мут со сроком. until=None → бессрочный мут."""
+    user = await session.get(User, user_id)
+    if user is None:
+        return None
+    # Бессрочный мут храним как далёкую дату, чтобы _active() всегда был True.
+    user.muted_until = until or datetime(2100, 1, 1, tzinfo=timezone.utc)
+    await session.flush()
+    return user
+
+
+async def clear_mute(session: AsyncSession, user_id: int) -> User | None:
+    user = await session.get(User, user_id)
+    if user is None:
+        return None
+    user.muted_until = None
+    await session.flush()
+    return user
+
+
+async def set_profile_lock(
+    session: AsyncSession, user_id: int, until: datetime | None
+) -> User | None:
+    """Блокировка правки профиля со сроком. until=None → бессрочно."""
+    user = await session.get(User, user_id)
+    if user is None:
+        return None
+    user.profile_locked_until = until or datetime(
+        2100, 1, 1, tzinfo=timezone.utc
+    )
+    await session.flush()
+    return user
+
+
+async def clear_profile_lock(
+    session: AsyncSession, user_id: int
+) -> User | None:
+    user = await session.get(User, user_id)
+    if user is None:
+        return None
+    user.profile_locked_until = None
+    await session.flush()
+    return user
+
+
+async def admin_set_board(
+    session: AsyncSession, user_id: int, on_board: bool
+) -> User | None:
+    """Админ снимает/возвращает анкету юзера на доску."""
+    user = await session.get(User, user_id)
+    if user is None:
+        return None
+    user.on_board = on_board
     await session.flush()
     return user
 

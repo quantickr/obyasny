@@ -48,6 +48,8 @@ async def profile_page(
             "error": error,
             "saved": saved == "1",
             "tg": tg,
+            "profile_locked": user_service.is_profile_locked(user),
+            "profile_locked_until": user.profile_locked_until,
         },
     )
 
@@ -57,6 +59,17 @@ def _parse_edu_level(raw: str) -> EduLevel | None:
         return EduLevel(raw)
     except ValueError:
         return None
+
+
+def _locked_redirect(user) -> RedirectResponse | None:
+    """Если админ заблокировал правку профиля — вернуть редирект с ошибкой."""
+    if user_service.is_profile_locked(user):
+        until = user.profile_locked_until.strftime("%d.%m.%Y %H:%M")
+        msg = f"Редактирование профиля ограничено администратором до {until} UTC"
+        return RedirectResponse(
+            url=f"/profile?error={quote(msg)}", status_code=303
+        )
+    return None
 
 
 @router.post("/profile")
@@ -71,6 +84,8 @@ async def update_profile(
     course: str = Form(""),
     edu_level: str = Form(""),
 ):
+    if (r := _locked_redirect(user)) is not None:
+        return r
     course_val = int(course) if course.isdigit() else None
     level = _parse_edu_level(edu_level)
     # Школьник учится в школе — вуз подставляем сами.
@@ -127,6 +142,8 @@ async def upload_avatar(
     session: SessionDep,
     file: UploadFile = File(...),
 ):
+    if (r := _locked_redirect(user)) is not None:
+        return r
     try:
         avatar_url = await upload_service.save_avatar(file, user.id)
     except upload_service.UploadError as e:
@@ -147,6 +164,8 @@ async def add_topic(
     level: str = Form(""),
     details: str = Form(""),
 ):
+    if (r := _locked_redirect(user)) is not None:
+        return r
     lvl = int(level) if level.isdigit() else None
     if lvl is not None:
         lvl = min(max(lvl, 1), 10)
@@ -175,6 +194,8 @@ async def update_topic_level(
     user_topic_id: int,
     level: str = Form(""),
 ):
+    if (r := _locked_redirect(user)) is not None:
+        return r
     lvl = int(level) if level.isdigit() else None
     await topic_service.update_user_topic_level(
         session, user.id, user_topic_id, lvl
@@ -190,6 +211,8 @@ async def update_topic_details(
     user_topic_id: int,
     details: str = Form(""),
 ):
+    if (r := _locked_redirect(user)) is not None:
+        return r
     try:
         await topic_service.update_user_topic_details(
             session, user.id, user_topic_id, details or None
@@ -206,6 +229,8 @@ async def update_topic_details(
 async def remove_topic(
     user: CurrentUser, session: SessionDep, user_topic_id: int
 ):
+    if (r := _locked_redirect(user)) is not None:
+        return r
     await topic_service.remove_user_topic(session, user.id, user_topic_id)
     await session.commit()
     return RedirectResponse(url="/profile", status_code=303)
@@ -215,6 +240,8 @@ async def remove_topic(
 async def toggle_board(user: CurrentUser, session: SessionDep):
     from app.services import board_service
 
+    if (r := _locked_redirect(user)) is not None:
+        return r
     await board_service.toggle_board(session, user)
     await session.commit()
     return RedirectResponse(url="/profile", status_code=303)

@@ -10,7 +10,7 @@
     {% set lastm = last.get(chat.id) %}
     <div class="relative {% if chat.completed_at %}opacity-70{% endif %}">
     <a href="/chat/{{ chat.id }}"
-       class="flex items-center gap-3 p-4 {% if chat.completed_at %}pr-10{% endif %} hover:bg-slate-50 transition-colors">
+       class="flex items-center gap-3 p-4 pr-10 hover:bg-slate-50 transition-colors">
         {% if partner and partner.avatar_url %}
         <img src="{{ partner.avatar_url }}" alt="Аватар"
              class="w-11 h-11 rounded-full object-cover border border-slate-200 shrink-0">
@@ -31,16 +31,14 @@
             </p>
         </div>
         {% if unread_n %}
-        <span class="shrink-0 min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-xs grid place-items-center">{{ unread_n }}</span>
+        <span class="shrink-0 min-w-[20px] h-5 px-1.5 mr-4 rounded-full bg-red-500 text-white text-xs grid place-items-center">{{ unread_n }}</span>
         {% endif %}
     </a>
-        {% if chat.completed_at %}
         <form method="post" action="/chat/{{ chat.id }}/hide" class="absolute top-1/2 right-3 -translate-y-1/2"
               onsubmit="return confirm('Удалить чат у себя? У собеседника он останется.');">
             <button type="submit" title="Удалить у себя"
                     class="text-slate-300 hover:text-red-500 text-xl leading-none">×</button>
         </form>
-        {% endif %}
     </div>
     {% else %}
     <p class="p-4 text-sm text-slate-400">Пока нет чатов. Найдите кого-нибудь через поиск или подбор пар.</p>

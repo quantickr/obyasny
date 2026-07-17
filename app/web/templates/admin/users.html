@@ -17,23 +17,16 @@
     <div class="p-4 flex items-center justify-between gap-3">
         <div class="min-w-0">
             <p class="text-sm font-semibold break-words">
-                <a href="/u/{{ u.id }}" class="text-brand-600 hover:text-brand-700">{{ u.display_name }}</a>
+                <a href="/admin/users/{{ u.id }}" class="text-brand-600 hover:text-brand-700">{{ u.display_name }}</a>
                 {% if u.is_admin %}<span class="text-[11px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">admin</span>{% endif %}
                 {% if u.is_banned %}<span class="text-[11px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded">бан</span>{% endif %}
+                {% if u.muted_until %}<span class="text-[11px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">мут</span>{% endif %}
+                {% if u.profile_locked_until %}<span class="text-[11px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded">лок</span>{% endif %}
             </p>
             <p class="text-xs text-slate-400 break-words">#{{ u.id }}{% if u.email %} · {{ u.email }}{% endif %}</p>
         </div>
         <div class="shrink-0">
-            {% if u.is_banned %}
-            <form method="post" action="/admin/users/{{ u.id }}/unban">
-                <button class="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded hover:bg-emerald-700">Разбанить</button>
-            </form>
-            {% elif not u.is_admin %}
-            <form method="post" action="/admin/users/{{ u.id }}/ban"
-                  onsubmit="return confirm('Забанить {{ u.display_name }}?');">
-                <button class="text-xs bg-red-600 text-white px-3 py-1.5 rounded hover:bg-red-700">Бан</button>
-            </form>
-            {% endif %}
+            <a href="/admin/users/{{ u.id }}" class="text-xs bg-slate-700 text-white px-3 py-1.5 rounded hover:bg-slate-800">Управление</a>
         </div>
     </div>
     {% else %}

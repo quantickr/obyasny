@@ -99,6 +99,19 @@ class User(Base, TimestampMixin):
     is_banned: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False
     )
+    # Срочные наказания (None → не активно; в будущем → активно; в прошлом → истекло).
+    # Бессрочный бан: is_banned=True + banned_until=None.
+    banned_until: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    # Мут: пользователь не может писать в чаты (веб + Telegram) до этой даты.
+    muted_until: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    # Блокировка правки собственного профиля админом до этой даты.
+    profile_locked_until: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     user_topics: Mapped[list["UserTopic"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"

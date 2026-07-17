@@ -198,13 +198,21 @@ async def chat_ws(websocket: WebSocket, chat_id: int):
                 )
                 if chat is None or chat.completed_at is not None:
                     continue
-                msg = await chat_service.save_message(
-                    session,
-                    chat_id=chat_id,
-                    sender_id=user_id,
-                    body=body,
-                    source=MessageSource.web,
-                )
+                try:
+                    msg = await chat_service.save_message(
+                        session,
+                        chat_id=chat_id,
+                        sender_id=user_id,
+                        body=body,
+                        source=MessageSource.web,
+                    )
+                except chat_service.MutedError:
+                    # Пользователь замучен админом — сообщение не сохраняем.
+                    try:
+                        await websocket.send_json({"error": "muted"})
+                    except Exception:
+                        pass
+                    continue
                 # Снимаем поля до commit: после него объект может быть expired.
                 msg_id = msg.id
                 clean_body = msg.body  # цензурированная версия из save_message

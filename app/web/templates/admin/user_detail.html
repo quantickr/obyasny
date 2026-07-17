@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% block title %}{{ target.display_name }} — Админ{% endblock %}
+{% block content %}
+{% set edu_ru = {'schoolchild': 'Школьник', 'bachelor': 'Бакалавриат', 'specialist': 'Специалитет', 'master': 'Магистратура', 'postgrad': 'Аспирантура'} %}
+
+{% macro duration_fields(name) %}
+<div class="flex flex-wrap items-center gap-3 text-sm mb-2">
+    <label class="flex items-center gap-1"><input type="radio" name="preset" value="1h"> 1 час</label>
+    <label class="flex items-center gap-1"><input type="radio" name="preset" value="1d" checked> 1 день</label>
+    <label class="flex items-center gap-1"><input type="radio" name="preset" value="7d"> 7 дней</label>
+    <label class="flex items-center gap-1"><input type="radio" name="preset" value="30d"> 30 дней</label>
+    <label class="flex items-center gap-1"><input type="radio" name="preset" value="forever"> навсегда</label>
+    <label class="flex items-center gap-1">
+        <input type="radio" name="preset" value="custom"> свой:
+        <input type="number" name="amount" min="1" max="3650" class="w-16 border border-slate-300 rounded px-1 py-0.5">
+        <select name="unit" class="border border-slate-300 rounded px-1 py-0.5">
+            <option value="hours">часов</option>
+            <option value="days">дней</option>
+        </select>
+    </label>
+</div>
+{% endmacro %}
+
+<div class="max-w-3xl mx-auto space-y-6">
+    <div class="flex items-center justify-between">
+        <h1 class="text-xl font-bold break-words">{{ target.display_name }}
+            <span class="text-sm font-normal text-slate-400">#{{ target.id }}</span></h1>
+        <a href="/admin/users" class="text-sm text-slate-500 hover:text-brand-600">← К списку</a>
+    </div>
+
+    {# Статусы наказаний #}
+    <div class="flex flex-wrap gap-2 text-xs">
+        {% if target.is_admin %}<span class="bg-amber-100 text-amber-700 px-2 py-1 rounded">admin</span>{% endif %}
+        {% if target.is_banned %}<span class="bg-red-100 text-red-700 px-2 py-1 rounded">бан{% if target.banned_until %} до {{ target.banned_until.strftime('%d.%m.%Y %H:%M') }} UTC{% else %} (бессрочно){% endif %}</span>{% endif %}
+        {% if is_muted %}<span class="bg-purple-100 text-purple-700 px-2 py-1 rounded">мут до {{ target.muted_until.strftime('%d.%m.%Y %H:%M') }} UTC</span>{% endif %}
+        {% if is_locked %}<span class="bg-slate-200 text-slate-700 px-2 py-1 rounded">профиль заблокирован до {{ target.profile_locked_until.strftime('%d.%m.%Y %H:%M') }} UTC</span>{% endif %}
+        {% if target.on_board %}<span class="bg-green-100 text-green-700 px-2 py-1 rounded">на доске</span>{% endif %}
+    </div>
+
+    {# Правка профиля #}
+    <div class="bg-white p-5 rounded-xl border border-slate-200">
+        <h2 class="font-semibold mb-3">Данные профиля</h2>
+        <form method="post" action="/admin/users/{{ target.id }}/profile" class="space-y-3">
+            <div>
+                <label class="block text-sm text-slate-500">Имя</label>
+                <input type="text" name="display_name" value="{{ target.display_name }}" required
+                       class="w-full border border-slate-300 rounded-md px-3 py-2">
+            </div>
+            <div class="flex gap-2">
+                <div class="flex-1">
+                    <label class="block text-sm text-slate-500">Уровень</label>
+                    <select name="edu_level" class="w-full border border-slate-300 rounded-md px-3 py-2">
+                        {% for lvl in edu_levels %}
+                        <option value="{{ lvl.value }}" {% if target.edu_level == lvl %}selected{% endif %}>{{ edu_ru[lvl.value] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="flex-1">
+                    <label class="block text-sm text-slate-500">Курс</label>
+                    <select name="course" class="w-full border border-slate-300 rounded-md px-3 py-2">
+                        {% for c in range(1, 12) %}
+                        <option value="{{ c }}" {% if target.course == c %}selected{% endif %}>{{ c }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm text-slate-500">Вуз</label>
+                <input type="text" name="university" value="{{ target.university or '' }}"
+                       class="w-full border border-slate-300 rounded-md px-3 py-2">
+            </div>
+            <div>
+                <label class="block text-sm text-slate-500">О себе</label>
+                <textarea name="bio" rows="3" class="w-full border border-slate-300 rounded-md px-3 py-2">{{ target.bio or '' }}</textarea>
+            </div>
+            <button class="bg-brand-500 text-white px-4 py-2 rounded-md hover:bg-brand-600">Сохранить</button>
+        </form>
+    </div>
+
+    {# Доска #}
+    <div class="bg-white p-5 rounded-xl border border-slate-200">
+        <h2 class="font-semibold mb-3">Доска</h2>
+        {% if target.on_board %}
+        <form method="post" action="/admin/users/{{ target.id }}/board/off"
+              onsubmit="return confirm('Снять анкету с доски?');">
+            <button class="text-sm bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600">Снять с доски</button>
+        </form>
+        {% else %}
+        <p class="text-sm text-slate-400">Пользователя нет на доске.</p>
+        {% endif %}
+    </div>
+
+    {# Темы #}
+    <div class="bg-white p-5 rounded-xl border border-slate-200">
+        <h2 class="font-semibold mb-3">Темы</h2>
+        <div class="space-y-4">
+            <div>
+                <p class="text-sm text-slate-500 mb-1">Может объяснить</p>
+                {% for ut in can_teach %}
+                <div class="flex items-center justify-between gap-2 text-sm py-1">
+                    <span class="break-words">{{ ut.topic.name }}{% if ut.level %} · ур. {{ ut.level }}{% endif %}</span>
+                    <form method="post" action="/admin/users/{{ target.id }}/topics/{{ ut.id }}/remove"
+                          onsubmit="return confirm('Удалить тему?');">
+                        <button class="text-xs text-red-500 hover:text-red-700">удалить</button>
+                    </form>
+                </div>
+                {% else %}<p class="text-xs text-slate-400">Нет тем</p>{% endfor %}
+            </div>
+            <div>
+                <p class="text-sm text-slate-500 mb-1">Хочет узнать</p>
+                {% for ut in wants_learn %}
+                <div class="flex items-center justify-between gap-2 text-sm py-1">
+                    <span class="break-words">{{ ut.topic.name }}{% if ut.level %} · ур. {{ ut.level }}{% endif %}</span>
+                    <form method="post" action="/admin/users/{{ target.id }}/topics/{{ ut.id }}/remove"
+                          onsubmit="return confirm('Удалить тему?');">
+                        <button class="text-xs text-red-500 hover:text-red-700">удалить</button>
+                    </form>
+                </div>
+                {% else %}<p class="text-xs text-slate-400">Нет тем</p>{% endfor %}
+            </div>
+            <form method="post" action="/admin/users/{{ target.id }}/topics/add" class="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
+                <input type="text" name="topic_name" placeholder="Название темы" required
+                       class="flex-1 min-w-[140px] border border-slate-300 rounded px-2 py-1 text-sm">
+                <select name="kind" class="border border-slate-300 rounded px-2 py-1 text-sm">
+                    <option value="can_teach">может объяснить</option>
+                    <option value="wants_learn">хочет узнать</option>
+                </select>
+                <input type="number" name="level" min="1" max="10" placeholder="ур." class="w-16 border border-slate-300 rounded px-2 py-1 text-sm">
+                <button class="text-sm bg-slate-700 text-white px-3 py-1 rounded hover:bg-slate-800">Добавить</button>
+            </form>
+        </div>
+    </div>
+
+    {# Наказания #}
+    {% if not target.is_admin %}
+    <div class="bg-white p-5 rounded-xl border border-slate-200 space-y-5">
+        <h2 class="font-semibold">Наказания</h2>
+
+        {# Бан #}
+        <div>
+            <p class="text-sm font-medium mb-1">Бан (запрет входа на сайт)</p>
+            {% if target.is_banned %}
+            <form method="post" action="/admin/users/{{ target.id }}/unban">
+                <button class="text-sm bg-emerald-600 text-white px-4 py-2 rounded hover:bg-emerald-700">Снять бан</button>
+            </form>
+            {% else %}
+            <form method="post" action="/admin/users/{{ target.id }}/ban"
+                  onsubmit="return confirm('Забанить {{ target.display_name }}?');">
+                {{ duration_fields('ban') }}
+                <button class="text-sm bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">Забанить</button>
+            </form>
+            {% endif %}
+        </div>
+
+        {# Мут #}
+        <div class="pt-4 border-t border-slate-100">
+            <p class="text-sm font-medium mb-1">Мут (запрет писать в чаты)</p>
+            {% if is_muted %}
+            <form method="post" action="/admin/users/{{ target.id }}/unmute">
+                <button class="text-sm bg-emerald-600 text-white px-4 py-2 rounded hover:bg-emerald-700">Снять мут</button>
+            </form>
+            {% else %}
+            <form method="post" action="/admin/users/{{ target.id }}/mute">
+                {{ duration_fields('mute') }}
+                <button class="text-sm bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">Замутить</button>
+            </form>
+            {% endif %}
+        </div>
+
+        {# Лок профиля #}
+        <div class="pt-4 border-t border-slate-100">
+            <p class="text-sm font-medium mb-1">Блокировка правки профиля</p>
+            {% if is_locked %}
+            <form method="post" action="/admin/users/{{ target.id }}/unlock">
+                <button class="text-sm bg-emerald-600 text-white px-4 py-2 rounded hover:bg-emerald-700">Разблокировать профиль</button>
+            </form>
+            {% else %}
+            <form method="post" action="/admin/users/{{ target.id }}/lock">
+                {{ duration_fields('lock') }}
+                <button class="text-sm bg-slate-700 text-white px-4 py-2 rounded hover:bg-slate-800">Заблокировать профиль</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

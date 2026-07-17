@@ -6,6 +6,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.profanity import censor
 from app.models.chat import Chat, ChatContext, Message, MessageSource
 from app.models.chat_block import ChatBlock
+from app.models.user import User
+
+
+class MutedError(Exception):
+    """Отправитель замучен админом и не может писать в чаты."""
+
+    def __init__(self, until):
+        self.until = until
+        super().__init__("muted")
 
 
 def _order_pair(a: int, b: int) -> tuple[int, int]:
@@ -188,6 +197,15 @@ async def save_message(
     tg_message_id: int | None = None,
     reply_to_id: int | None = None,
 ) -> Message:
+    # Мут: замученный пользователь не может писать в чаты (веб + Telegram).
+    # Единая точка проверки для обоих каналов.
+    sender = await session.get(User, sender_id)
+    if (
+        sender is not None
+        and sender.muted_until is not None
+        and sender.muted_until > datetime.now(timezone.utc)
+    ):
+        raise MutedError(sender.muted_until)
     # Модерация: маскируем мат/угрозы на '*' (не отклоняем, чтобы диалог
     # не рвался). Единая точка для веба и Telegram-бота.
     msg = Message(

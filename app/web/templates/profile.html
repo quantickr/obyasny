@@ -8,6 +8,11 @@
             <span class="text-sm bg-amber-100 text-amber-800 px-2 py-1 rounded">🍫 {{ balance }}</span>
         </div>
 
+        {% if profile_locked %}
+        <div class="mb-4 bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-2 rounded-md">
+            🔒 Редактирование профиля временно ограничено администратором{% if profile_locked_until %} до {{ profile_locked_until.strftime('%d.%m.%Y %H:%M') }} UTC{% endif %}.
+        </div>
+        {% endif %}
         {% if error %}
         <div class="mb-4 bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-2 rounded-md">{{ error }}</div>
         {% endif %}
