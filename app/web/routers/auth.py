@@ -30,9 +30,11 @@ def _set_session(response: RedirectResponse, user_id: int) -> None:
 
 @router.get("/", response_class=HTMLResponse)
 async def index(request: Request, user: CurrentUserOptional):
-    if user:
-        return RedirectResponse(url="/profile", status_code=303)
-    return templates.TemplateResponse(request, "index.html", {"user": None})
+    return templates.TemplateResponse(
+        request,
+        "index.html",
+        {"user": user, "bot_username": settings.bot_username},
+    )
 
 
 @router.get("/login", response_class=HTMLResponse)
