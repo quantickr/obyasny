@@ -12,6 +12,24 @@ class AuthError(Exception):
     pass
 
 
+#: Максимальный номер курса/класса по уровню образования.
+#: schoolchild — 11 классов, bachelor — 5, specialist — 6, master — 3,
+#: postgrad — 4. Значение по умолчанию (11) — на случай неизвестного уровня.
+MAX_COURSE_BY_LEVEL: dict[EduLevel, int] = {
+    EduLevel.schoolchild: 11,
+    EduLevel.bachelor: 5,
+    EduLevel.specialist: 6,
+    EduLevel.master: 3,
+    EduLevel.postgrad: 4,
+}
+
+
+def clamp_course(course: int, level: EduLevel | None) -> int:
+    """Ограничивает курс диапазоном 1..max, где max зависит от уровня."""
+    upper = MAX_COURSE_BY_LEVEL.get(level, 11) if level is not None else 11
+    return min(max(course, 1), upper)
+
+
 async def get_by_id(session: AsyncSession, user_id: int) -> User | None:
     return await session.get(User, user_id)
 
@@ -47,7 +65,7 @@ async def register_email(
         password_hash=hash_password(password),
         display_name=ensure_clean(display_name.strip()) or email.split("@")[0],
         university=ensure_clean(university.strip()),
-        course=course,
+        course=clamp_course(course, edu_level),
         edu_level=edu_level,
     )
     session.add(user)
@@ -202,10 +220,12 @@ async def update_profile(
         user.show_tg_username = show_tg_username
     if university is not None:
         user.university = ensure_clean(university.strip())
-    if course is not None:
-        user.course = min(max(course, 1), 11)
     if edu_level is not None:
         user.edu_level = edu_level
+    if course is not None:
+        # Валидируем курс по итоговому уровню (только что заданному или текущему),
+        # чтобы, например, у бакалавра нельзя было выставить 8-й курс.
+        user.course = clamp_course(course, user.edu_level)
     if avatar_url is not None:
         user.avatar_url = avatar_url
     return user

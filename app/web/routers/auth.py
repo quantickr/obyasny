@@ -143,12 +143,14 @@ async def register_submit(
 
     if password != password_confirm:
         return _reject("Пароли не совпадают")
-    if not course.isdigit() or not (1 <= int(course) <= 11):
-        return _reject("Курс/класс должен быть числом от 1 до 11")
     try:
         level = EduLevel(edu_level)
     except ValueError:
         return _reject("Некорректный уровень обучения")
+    # Диапазон курса/класса зависит от уровня (напр. у бакалавра 1..5).
+    max_course = user_service.MAX_COURSE_BY_LEVEL.get(level, 11)
+    if not course.isdigit() or not (1 <= int(course) <= max_course):
+        return _reject(f"Курс/класс должен быть числом от 1 до {max_course}")
     # Школьник учится в школе — вуз не требуем, подставляем сами.
     if level == EduLevel.schoolchild:
         university = "Школа"
