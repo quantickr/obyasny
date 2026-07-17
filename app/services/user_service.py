@@ -65,6 +65,29 @@ async def authenticate_email(
     return user
 
 
+async def set_email_verified(session: AsyncSession, user: User) -> None:
+    """Помечает email пользователя подтверждённым."""
+    user.email_verified = True
+
+
+async def change_email(session: AsyncSession, user: User, new_email: str) -> None:
+    """Меняет/добавляет email пользователю и сбрасывает подтверждение.
+
+    Бросает AuthError, если email уже занят другим аккаунтом.
+    """
+    new_email = new_email.lower().strip()
+    if not new_email:
+        raise AuthError("Укажите email")
+    existing = await get_by_email(session, new_email)
+    if existing and existing.id != user.id:
+        raise AuthError("Пользователь с таким email уже существует")
+    if existing and existing.id == user.id and user.email_verified:
+        # Тот же самый уже подтверждённый email — ничего не делаем.
+        raise AuthError("Это ваш текущий email")
+    user.email = new_email
+    user.email_verified = False
+
+
 async def get_or_create_telegram_user(
     session: AsyncSession,
     telegram_id: int,

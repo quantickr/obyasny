@@ -6,7 +6,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.core.logging import setup_logging
-from app.web.dependencies import RequireLoginRedirect
+from app.web.dependencies import RequireEmailVerification, RequireLoginRedirect
 from app.web.routers import (
     auth,
     chat,
@@ -52,6 +52,13 @@ app.mount(
 @app.exception_handler(RequireLoginRedirect)
 async def require_login_handler(request: Request, exc: RequireLoginRedirect):
     return RedirectResponse(url="/login", status_code=303)
+
+
+@app.exception_handler(RequireEmailVerification)
+async def require_email_verification_handler(
+    request: Request, exc: RequireEmailVerification
+):
+    return RedirectResponse(url="/verify-email", status_code=303)
 
 
 app.include_router(auth.router)

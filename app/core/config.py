@@ -27,6 +27,15 @@ class Settings(BaseSettings):
 
     domain: str = "example.com"
 
+    # Отправка почты (SMTP). Timeweb: smtp.timeweb.ru, SSL 465,
+    # логин = адрес ящика, пароль = пароль ящика.
+    smtp_host: str = "smtp.timeweb.ru"
+    smtp_port: int = 465
+    smtp_user: str = ""  # логин = полный адрес ящика, напр. noreply@obyasny.ru
+    smtp_password: str = ""
+    smtp_from: str = ""  # адрес отправителя; если пусто — используется smtp_user
+    smtp_use_ssl: bool = True  # True → SSL(465); False → STARTTLS(587)
+
 
 @lru_cache
 def get_settings() -> Settings:

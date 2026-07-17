@@ -47,6 +47,10 @@ class User(Base, TimestampMixin):
     # Вход по email/паролю (опционально)
     email: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
     password_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Подтверждён ли email 6-значным кодом. Telegram-аккаунты (email=None) не блокируются.
+    email_verified: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
 
     display_name: Mapped[str] = mapped_column(String(120), nullable=False)
 

@@ -115,6 +115,32 @@
         {% endif %}
         <hr class="my-4">
         <div>
+            <label class="block text-sm text-slate-500 mb-1">Email</label>
+            {% if user.email %}
+                {% if user.email_verified %}
+                <p class="text-sm text-green-600 mb-2">✓ {{ user.email }} — подтверждён</p>
+                {% else %}
+                <p class="text-sm text-amber-600 mb-2">
+                    {{ user.email }} — не подтверждён.
+                    <a href="/verify-email" class="underline">Подтвердить</a>
+                </p>
+                {% endif %}
+            {% else %}
+                <p class="text-sm text-slate-500 mb-2">Email не указан.</p>
+            {% endif %}
+            <form method="post" action="/profile/email" class="flex flex-col sm:flex-row gap-2">
+                <input type="email" name="email" required
+                       placeholder="you@example.com"
+                       value="{{ user.email or '' }}"
+                       class="flex-1 border border-slate-300 rounded-md px-3 py-2">
+                <button class="text-sm bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">
+                    {% if user.email %}Изменить email{% else %}Добавить email{% endif %}
+                </button>
+            </form>
+            <p class="text-xs text-slate-400 mt-1">После изменения на почту придёт код подтверждения.</p>
+        </div>
+        <hr class="my-4">
+        <div>
             <p class="text-sm text-slate-500 mb-2">
                 {% if user.on_board %}
                 Вы на доске — другие студенты видят ваш профиль и темы.

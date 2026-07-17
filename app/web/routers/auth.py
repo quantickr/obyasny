@@ -7,10 +7,41 @@ from app.core.config import settings
 from app.core.profanity import ProfanityError
 from app.core.security import create_session_token, verify_telegram_login
 from app.models.user import EduLevel
-from app.services import user_service
+from app.services import email_service, email_verify_service, user_service
+from app.services.email_verify_service import TooSoonError
 from app.services.user_service import AuthError
-from app.web.dependencies import SESSION_COOKIE, CurrentUserOptional, SessionDep
+from app.web.dependencies import (
+    SESSION_COOKIE,
+    CurrentUserOptional,
+    CurrentUserUnverified,
+    SessionDep,
+)
 from app.web.templating import templates
+
+
+def _mask_email(email: str) -> str:
+    """Маскирует email для отображения: joh***@example.com."""
+    local, _, domain = email.partition("@")
+    if not domain:
+        return email
+    visible = local[:3]
+    return f"{visible}{'*' * max(len(local) - 3, 1)}@{domain}"
+
+
+async def _send_code_safe(user_id: int, email: str) -> str:
+    """Генерирует код и шлёт письмо. Возвращает notice для query.
+
+    Не бросает исключений — всегда возвращает строку-подсказку.
+    """
+    try:
+        code = await email_verify_service.issue_code(user_id, email)
+    except TooSoonError:
+        return "toosoon"
+    try:
+        await email_service.send_verification_code(email, code)
+    except email_service.EmailError:
+        return "mailfail"
+    return "sent"
 
 router = APIRouter()
 
@@ -115,7 +146,11 @@ async def register_submit(
         return _reject(str(e))
     except AuthError as e:
         return _reject(str(e))
-    response = RedirectResponse(url="/profile", status_code=303)
+    # Отправляем код подтверждения и ведём на страницу ввода кода.
+    notice = await _send_code_safe(user.id, user.email)
+    response = RedirectResponse(
+        url=f"/verify-email?notice={notice}", status_code=303
+    )
     _set_session(response, user.id)
     return response
 
@@ -143,6 +178,57 @@ async def telegram_callback(request: Request, session: SessionDep):
     response = RedirectResponse(url="/profile", status_code=303)
     _set_session(response, user.id)
     return response
+
+
+@router.get("/verify-email", response_class=HTMLResponse)
+async def verify_email_page(
+    request: Request,
+    user: CurrentUserUnverified,
+    error: str = "",
+    notice: str = "",
+):
+    # Нет email или уже подтверждён — здесь делать нечего.
+    if user.email is None or user.email_verified:
+        return RedirectResponse(url="/profile", status_code=303)
+    return templates.TemplateResponse(
+        request,
+        "auth/verify_email.html",
+        {
+            "user": None,  # шапку не показываем как для залогиненного
+            "email_masked": _mask_email(user.email),
+            "error": error,
+            "notice": notice,
+        },
+    )
+
+
+@router.post("/verify-email")
+async def verify_email_submit(
+    request: Request,
+    session: SessionDep,
+    user: CurrentUserUnverified,
+    code: str = Form(...),
+):
+    if user.email is None or user.email_verified:
+        return RedirectResponse(url="/profile", status_code=303)
+    verified_email = await email_verify_service.verify_code(user.id, code)
+    if verified_email is None or verified_email != user.email:
+        return RedirectResponse(
+            url="/verify-email?error=badcode", status_code=303
+        )
+    await user_service.set_email_verified(session, user)
+    await session.commit()
+    return RedirectResponse(url="/profile?saved=1", status_code=303)
+
+
+@router.post("/verify-email/resend")
+async def verify_email_resend(user: CurrentUserUnverified):
+    if user.email is None or user.email_verified:
+        return RedirectResponse(url="/profile", status_code=303)
+    notice = await _send_code_safe(user.id, user.email)
+    return RedirectResponse(
+        url=f"/verify-email?notice={notice}", status_code=303
+    )
 
 
 @router.get("/logout")

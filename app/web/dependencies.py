@@ -33,11 +33,37 @@ class RequireLoginRedirect(Exception):
     pass
 
 
+class RequireEmailVerification(Exception):
+    """У пользователя есть email, но он не подтверждён — жёсткая блокировка."""
+
+
+async def get_current_user_allow_unverified(
+    user: CurrentUserOptional,
+) -> User:
+    """Как get_current_user, но без проверки подтверждения email.
+
+    Используется страницами подтверждения (/verify-email, resend), чтобы не
+    зациклить редирект.
+    """
+    if user is None:
+        raise RequireLoginRedirect()
+    return user
+
+
+CurrentUserUnverified = Annotated[
+    User, Depends(get_current_user_allow_unverified)
+]
+
+
 async def get_current_user(
     user: CurrentUserOptional,
 ) -> User:
     if user is None:
         raise RequireLoginRedirect()
+    # Жёсткая блокировка: email указан, но не подтверждён.
+    # Telegram-аккаунты (email=None) не блокируются.
+    if user.email is not None and not user.email_verified:
+        raise RequireEmailVerification()
     return user
 
 

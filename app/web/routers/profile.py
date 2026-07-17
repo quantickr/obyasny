@@ -8,11 +8,15 @@ from app.models.topic import TopicKind
 from app.models.user import EduLevel
 from app.services import (
     chocolate_service,
+    email_service,
+    email_verify_service,
     linking_service,
     topic_service,
     upload_service,
     user_service,
 )
+from app.services.email_verify_service import TooSoonError
+from app.services.user_service import AuthError
 from app.web.dependencies import CurrentUser, CurrentUserOptional, SessionDep
 from app.web.templating import templates
 
@@ -87,6 +91,32 @@ async def update_profile(
             url=f"/profile?error={quote(str(e))}", status_code=303
         )
     return RedirectResponse(url="/profile?saved=1", status_code=303)
+
+
+@router.post("/profile/email")
+async def change_email(
+    user: CurrentUser,
+    session: SessionDep,
+    email: str = Form(...),
+):
+    """Меняет/добавляет email и отправляет код подтверждения."""
+    try:
+        await user_service.change_email(session, user, email)
+        await session.commit()
+    except AuthError as e:
+        return RedirectResponse(
+            url=f"/profile?error={quote(str(e))}", status_code=303
+        )
+    # Генерируем код и шлём письмо; gate теперь уведёт на /verify-email.
+    try:
+        code = await email_verify_service.issue_code(user.id, user.email)
+        try:
+            await email_service.send_verification_code(user.email, code)
+        except email_service.EmailError:
+            pass  # покажем страницу подтверждения с возможностью переслать
+    except TooSoonError:
+        pass
+    return RedirectResponse(url="/verify-email", status_code=303)
 
 
 @router.post("/profile/avatar")
