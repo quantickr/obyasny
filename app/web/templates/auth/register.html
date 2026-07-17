@@ -94,11 +94,17 @@
 })();
 
 // Школьник: вместо «Курс» — «Класс», вуз не нужен (подставляем «Школа»).
+// Диапазон курсов/классов зависит от уровня образования.
 (function () {
     const level = document.getElementById('reg-edu-level');
     const uni = document.getElementById('reg-university');
     const coursePh = document.getElementById('reg-course-placeholder');
-    if (!level || !uni || !coursePh) return;
+    const course = document.getElementById('reg-course');
+    if (!level || !uni || !coursePh || !course) return;
+    // Максимальный курс/класс по уровню обучения.
+    const MAX_COURSE = {
+        schoolchild: 11, bachelor: 5, specialist: 6, master: 3, postgrad: 4,
+    };
     function apply() {
         const isSchool = level.value === 'schoolchild';
         coursePh.textContent = isSchool ? 'Класс' : 'Курс';
@@ -109,6 +115,17 @@
         } else {
             uni.required = true;
             uni.classList.remove('hidden');
+        }
+        const max = MAX_COURSE[level.value] || 11;
+        // Прячем варианты сверх диапазона; выбранный вне диапазона — на плейсхолдер.
+        for (const opt of course.options) {
+            if (!opt.value) continue;  // плейсхолдер оставляем
+            const over = parseInt(opt.value, 10) > max;
+            opt.hidden = over;
+            opt.disabled = over;
+        }
+        if (course.value && parseInt(course.value, 10) > max) {
+            course.value = '';
         }
     }
     level.addEventListener('change', apply);

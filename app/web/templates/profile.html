@@ -86,7 +86,7 @@
                 </div>
                 <div class="flex-1">
                     <label class="block text-sm text-slate-500" id="profile-course-label">Курс</label>
-                    <select name="course" required class="w-full border border-slate-300 rounded-md px-3 py-2">
+                    <select name="course" id="profile-course" required class="w-full border border-slate-300 rounded-md px-3 py-2">
                         {% for c in range(1, 12) %}
                         <option value="{{ c }}" {% if user.course == c %}selected{% endif %}>{{ c }}</option>
                         {% endfor %}
@@ -292,15 +292,31 @@
 })();
 
 // Школьник: подпись «Класс» вместо «Курс», вуз не нужен.
+// Диапазон курсов/классов зависит от уровня образования.
 (function () {
     const level = document.getElementById('profile-edu-level');
     const courseLabel = document.getElementById('profile-course-label');
     const uniWrap = document.getElementById('profile-university-wrap');
-    if (!level || !courseLabel || !uniWrap) return;
+    const course = document.getElementById('profile-course');
+    if (!level || !courseLabel || !uniWrap || !course) return;
+    // Максимальный курс/класс по уровню обучения.
+    const MAX_COURSE = {
+        schoolchild: 11, bachelor: 5, specialist: 6, master: 3, postgrad: 4,
+    };
     function apply() {
         const isSchool = level.value === 'schoolchild';
         courseLabel.textContent = isSchool ? 'Класс' : 'Курс';
         uniWrap.classList.toggle('hidden', isSchool);
+        const max = MAX_COURSE[level.value] || 11;
+        // Прячем лишние варианты; если выбранный вне диапазона — сбрасываем на 1.
+        for (const opt of course.options) {
+            const over = parseInt(opt.value, 10) > max;
+            opt.hidden = over;
+            opt.disabled = over;
+        }
+        if (!course.value || parseInt(course.value, 10) > max) {
+            course.value = '1';
+        }
     }
     level.addEventListener('change', apply);
     apply();
