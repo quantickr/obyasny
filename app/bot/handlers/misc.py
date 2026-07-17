@@ -1,9 +1,10 @@
 from aiogram import F, Router
+from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.bot.keyboards import open_chat_button
+from app.bot.keyboards import main_menu, open_chat_button
 from app.bot.notifier import notify
 from app.core.config import settings
 from app.models.chat import ChatContext
@@ -14,6 +15,17 @@ from app.services import (
 )
 
 router = Router()
+
+
+@router.message(Command("menu"))
+async def menu(message: Message):
+    """Показать/обновить главное меню (актуальные кнопки, включая «💬 Чаты»).
+
+    Reply-клавиатура кэшируется на клиенте Telegram и не обновляется сама —
+    /menu присылает свежую раскладку тем, кто нажал /start до появления
+    новых кнопок.
+    """
+    await message.answer("Меню обновлено 👇", reply_markup=main_menu())
 
 
 @router.message(F.text == "🍫 Баланс")

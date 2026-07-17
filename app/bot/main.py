@@ -5,6 +5,7 @@ import socket
 from aiogram import Bot, Dispatcher
 from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.fsm.storage.redis import RedisStorage
+from aiogram.types import BotCommand
 
 from app.bot.handlers import chat, misc, requests, search, start
 from app.bot.middlewares import DbSessionMiddleware
@@ -55,6 +56,14 @@ async def main() -> None:
 
     bot = Bot(token=settings.bot_token, session=build_ipv4_session())
     dp = build_dispatcher()
+
+    # Меню команд Telegram (синяя кнопка «/»).
+    await bot.set_my_commands(
+        [
+            BotCommand(command="start", description="Запуск / привязка аккаунта"),
+            BotCommand(command="menu", description="Показать меню (кнопки)"),
+        ]
+    )
 
     # Фоновая задача: доставка web-сообщений в Telegram через Redis Pub/Sub.
     relay_task = asyncio.create_task(chat.chat_relay_subscriber(bot))
