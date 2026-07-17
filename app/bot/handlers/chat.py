@@ -45,7 +45,13 @@ async def show_chats(message: Message, session: AsyncSession):
         partner_id = chat_service.other_participant(c, me.id)
         partner = await user_service.get_by_id(session, partner_id)
         name = partner.display_name if partner else "Собеседник"
-        topic = _CTX_RU.get(c.context_type.value, "") if c.context_type else ""
+        # Для чатов из заявки title = «Тема — Имя отправителя»: берём тему.
+        if c.title:
+            topic = c.title.split(" — ")[0]
+        elif c.context_type:
+            topic = _CTX_RU.get(c.context_type.value, "")
+        else:
+            topic = ""
         rows.append((c.id, name, topic, unread.get(c.id, 0)))
     total = sum(r[3] for r in rows)
     header = (

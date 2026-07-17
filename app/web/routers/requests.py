@@ -16,6 +16,8 @@ async def requests_page(
     incoming = await request_service.incoming(session, user.id)
     outgoing = await request_service.outgoing(session, user.id)
     active = await request_service.active(session, user.id)
+    completed = await request_service.completed(session, user.id)
+    declined = await request_service.declined(session, user.id)
     return templates.TemplateResponse(
         request,
         "requests.html",
@@ -24,6 +26,8 @@ async def requests_page(
             "incoming": incoming,
             "outgoing": outgoing,
             "active": active,
+            "completed": completed,
+            "declined": declined,
             "tab": tab,
         },
     )

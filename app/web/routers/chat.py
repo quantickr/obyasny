@@ -90,11 +90,15 @@ async def chat_page(
     # Связанная заявка (если чат создан из заявки) — для кнопки «Завершить».
     req = None
     my_done = False
+    partner_done = False
     if chat.context_id is not None:
         req = await request_service.get_request(session, chat.context_id)
         if req is not None:
             my_done = (
                 req.sender_done if user.id == req.sender_id else req.receiver_done
+            )
+            partner_done = (
+                req.receiver_done if user.id == req.sender_id else req.sender_done
             )
 
     chats, partners, unread, last = await _chat_sidebar(session, user)
@@ -112,6 +116,7 @@ async def chat_page(
             "last": last,
             "req": req,
             "my_done": my_done,
+            "partner_done": partner_done,
             "completed": chat.completed_at is not None,
         },
     )

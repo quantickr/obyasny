@@ -75,6 +75,11 @@
             {% elif req and req.status.value == 'accepted' %}
             {% if my_done %}
             <span class="text-xs text-amber-600">Вы завершили, ждём собеседника…</span>
+            {% elif partner_done %}
+            <span class="text-xs text-amber-600 mr-1">Собеседник попросил завершить</span>
+            <form method="post" action="/chat/{{ chat.id }}/done">
+                <button type="submit" class="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-md hover:bg-emerald-700">Подтвердить</button>
+            </form>
             {% else %}
             <form method="post" action="/chat/{{ chat.id }}/done">
                 <button type="submit" class="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-md hover:bg-emerald-700">Завершить</button>

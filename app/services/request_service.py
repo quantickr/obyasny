@@ -42,29 +42,31 @@ async def create_request(
     except ProfanityError as e:
         raise RequestError(str(e)) from e
 
-    # Одна активная заявка на пару (sender→receiver) по всем темам.
+    # Одна активная заявка на пару (sender→receiver) ПО ЭТОЙ ТЕМЕ.
     active = await session.scalar(
         select(Request).where(
             Request.sender_id == sender_id,
             Request.receiver_id == receiver_id,
+            Request.topic_id == topic_id,
             Request.status == RequestStatus.pending,
         )
     )
     if active is not None:
         raise RequestError(
-            "Заявка этому пользователю уже отправлена и ожидает ответа"
+            "Заявка этому пользователю по этой теме уже отправлена и ожидает ответа"
         )
 
-    # После принятия повторно слать нельзя.
+    # После принятия повторно слать по ЭТОЙ ЖЕ теме нельзя.
     accepted = await session.scalar(
         select(Request).where(
             Request.sender_id == sender_id,
             Request.receiver_id == receiver_id,
+            Request.topic_id == topic_id,
             Request.status == RequestStatus.accepted,
         )
     )
     if accepted is not None:
-        raise RequestError("Вы уже связаны с этим пользователем")
+        raise RequestError("Вы уже связаны с этим пользователем по этой теме")
 
     # Действующая блокировка после отказа.
     now = datetime.now(timezone.utc)
@@ -133,9 +135,14 @@ async def incoming(session: AsyncSession, user_id: int) -> list[Request]:
 
 
 async def outgoing(session: AsyncSession, user_id: int) -> list[Request]:
+    """Исходящие заявки, ожидающие ответа (pending). Принятые — в active(),
+    завершённые — в completed(), отклонённые — в declined()."""
     stmt = (
         select(Request)
-        .where(Request.sender_id == user_id)
+        .where(
+            Request.sender_id == user_id,
+            Request.status == RequestStatus.pending,
+        )
         .options(
             selectinload(Request.receiver),
             selectinload(Request.topic),
@@ -161,6 +168,44 @@ async def active(session: AsyncSession, user_id: int) -> list[Request]:
         )
         .options(
             selectinload(Request.sender),
+            selectinload(Request.receiver),
+            selectinload(Request.topic),
+        )
+        .order_by(Request.responded_at.desc())
+    )
+    return list(await session.scalars(stmt))
+
+
+async def completed(session: AsyncSession, user_id: int) -> list[Request]:
+    """Завершённые заявки, где пользователь — sender или receiver."""
+    stmt = (
+        select(Request)
+        .where(
+            or_(
+                Request.sender_id == user_id,
+                Request.receiver_id == user_id,
+            ),
+            Request.status == RequestStatus.completed,
+        )
+        .options(
+            selectinload(Request.sender),
+            selectinload(Request.receiver),
+            selectinload(Request.topic),
+        )
+        .order_by(Request.completed_at.desc())
+    )
+    return list(await session.scalars(stmt))
+
+
+async def declined(session: AsyncSession, user_id: int) -> list[Request]:
+    """Отклонённые исходящие заявки пользователя (кому и по какой теме отказали)."""
+    stmt = (
+        select(Request)
+        .where(
+            Request.sender_id == user_id,
+            Request.status == RequestStatus.declined,
+        )
+        .options(
             selectinload(Request.receiver),
             selectinload(Request.topic),
         )
