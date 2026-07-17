@@ -3,7 +3,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.bot.keyboards import teacher_actions
+from app.bot.keyboards import NOT_REGISTERED, register_button, teacher_actions
 from app.bot.states import SearchStates
 from app.models.request import OfferType
 from app.services import request_service, search_service, user_service
@@ -22,7 +22,7 @@ async def do_search(message: Message, state: FSMContext, session: AsyncSession):
     await state.clear()
     me = await user_service.get_by_telegram_id(session, message.from_user.id)
     if me is None:
-        await message.answer("Сначала нажмите /start")
+        await message.answer(NOT_REGISTERED, reply_markup=register_button())
         return
 
     results = await search_service.find_teachers_by_query(
@@ -43,7 +43,7 @@ async def send_request(callback: CallbackQuery, session: AsyncSession):
     _, teacher_id, topic_id = callback.data.split(":")
     me = await user_service.get_by_telegram_id(session, callback.from_user.id)
     if me is None:
-        await callback.answer("Сначала /start", show_alert=True)
+        await callback.answer(NOT_REGISTERED, show_alert=True)
         return
     try:
         req = await request_service.create_request(

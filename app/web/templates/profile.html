@@ -308,6 +308,24 @@
         </form>
     </div>
 </div>
+
+{% if suggest_link_tg %}
+<div id="tg-link-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-sm w-full p-6 text-center">
+        <div class="text-4xl mb-2">📲</div>
+        <h2 class="text-xl font-bold mb-2">Привяжите Telegram</h2>
+        <p class="text-sm text-slate-500 mb-5">
+            Чтобы пользоваться ботом — заявки, чаты и уведомления прямо в
+            Telegram — привяжите свой аккаунт. Без привязки бот работать не будет.
+        </p>
+        <form method="post" action="/profile/link-telegram">
+            <button class="w-full bg-sky-500 text-white py-2.5 rounded-lg font-bold hover:bg-sky-600 transition-colors">Привязать Telegram</button>
+        </form>
+        <button type="button" id="tg-link-later"
+                class="mt-3 text-sm text-slate-400 hover:underline">Позже</button>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
@@ -546,6 +564,24 @@
             } catch (e) { /* тихо игнорируем сетевые сбои */ }
         }, 200);
     });
+})();
+
+// Модалка привязки Telegram: показываем зарегистрированным по почте, пока не
+// привязали TG. «Позже» скрывает окно и запоминает выбор в localStorage.
+(function () {
+    const modal = document.getElementById('tg-link-modal');
+    if (!modal) return;
+    if (localStorage.getItem('tgLinkDismissed') === '1') return;
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    const later = document.getElementById('tg-link-later');
+    if (later) {
+        later.addEventListener('click', function () {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            localStorage.setItem('tgLinkDismissed', '1');
+        });
+    }
 })();
 </script>
 {% endblock %}

@@ -52,6 +52,9 @@ async def profile_page(
             "profile_locked_until": user.profile_locked_until,
             # На доску можно только с ≥1 «могу объяснить» и ≥1 «хочу узнать».
             "can_publish_board": bool(can_teach) and bool(wants_learn),
+            # Регистрировался по почте (есть email), но ещё не привязал
+            # Telegram → предлагаем привязку модалкой, чтобы работал бот.
+            "suggest_link_tg": bool(user.email) and not user.telegram_id,
         },
     )
 

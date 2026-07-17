@@ -3,7 +3,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.bot.keyboards import open_chat_button
+from app.bot.keyboards import NOT_REGISTERED, open_chat_button, register_button
 from app.bot.notifier import notify
 from app.bot.states import ChatStates
 from app.services import chat_service, request_service, user_service
@@ -15,7 +15,7 @@ router = Router()
 async def show_incoming(message: Message, session: AsyncSession):
     me = await user_service.get_by_telegram_id(session, message.from_user.id)
     if me is None:
-        await message.answer("Сначала /start")
+        await message.answer(NOT_REGISTERED, reply_markup=register_button())
         return
     reqs = await request_service.incoming(session, me.id)
     if not reqs:
@@ -47,7 +47,7 @@ async def accept(callback: CallbackQuery, session: AsyncSession):
     req_id = int(callback.data.split(":")[1])
     me = await user_service.get_by_telegram_id(session, callback.from_user.id)
     if me is None:
-        await callback.answer("Сначала /start", show_alert=True)
+        await callback.answer(NOT_REGISTERED, show_alert=True)
         return
     try:
         req = await request_service.accept_request(session, req_id, me.id)
@@ -87,7 +87,7 @@ async def decline_with_block(callback: CallbackQuery, session: AsyncSession):
     req_id = int(req_id_raw)
     me = await user_service.get_by_telegram_id(session, callback.from_user.id)
     if me is None:
-        await callback.answer("Сначала /start", show_alert=True)
+        await callback.answer(NOT_REGISTERED, show_alert=True)
         return
     try:
         await request_service.decline_request(
@@ -107,7 +107,7 @@ async def open_chat(
     chat_id = int(callback.data.split(":")[1])
     me = await user_service.get_by_telegram_id(session, callback.from_user.id)
     if me is None:
-        await callback.answer("Сначала /start", show_alert=True)
+        await callback.answer(NOT_REGISTERED, show_alert=True)
         return
     chat = await chat_service.get_chat_for_user(session, chat_id, me.id)
     if chat is None:

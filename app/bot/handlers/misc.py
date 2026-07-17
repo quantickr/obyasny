@@ -4,7 +4,12 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.bot.keyboards import main_menu, open_chat_button
+from app.bot.keyboards import (
+    NOT_REGISTERED,
+    main_menu,
+    open_chat_button,
+    register_button,
+)
 from app.bot.notifier import notify
 from app.core.config import settings
 from app.models.chat import ChatContext
@@ -32,7 +37,7 @@ async def menu(message: Message):
 async def balance(message: Message, session: AsyncSession):
     me = await user_service.get_by_telegram_id(session, message.from_user.id)
     if me is None:
-        await message.answer("Сначала /start")
+        await message.answer(NOT_REGISTERED, reply_markup=register_button())
         return
     bal = await chocolate_service.get_balance(session, me.id)
     await message.answer(f"🍫 Ваш баланс шоколадок: {bal}")
@@ -42,7 +47,7 @@ async def balance(message: Message, session: AsyncSession):
 async def profile(message: Message, session: AsyncSession):
     me = await user_service.get_by_telegram_id(session, message.from_user.id)
     if me is None:
-        await message.answer("Сначала /start")
+        await message.answer(NOT_REGISTERED, reply_markup=register_button())
         return
     linked = "✅ привязан к сайту" if me.email else "не привязан к email"
     await message.answer(
@@ -73,7 +78,7 @@ async def connect_match(
     partner_id = int(callback.data.split(":")[1])
     me = await user_service.get_by_telegram_id(session, callback.from_user.id)
     if me is None:
-        await callback.answer("Сначала /start", show_alert=True)
+        await callback.answer(NOT_REGISTERED, show_alert=True)
         return
     chat = await chat_service.get_or_create_chat(
         session, me.id, partner_id, context_type=ChatContext.match

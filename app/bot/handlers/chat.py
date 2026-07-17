@@ -4,7 +4,12 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.bot.keyboards import chats_inbox, open_chat_button
+from app.bot.keyboards import (
+    NOT_REGISTERED,
+    chats_inbox,
+    open_chat_button,
+    register_button,
+)
 from app.bot.states import ChatStates
 from app.core.database import async_session_factory
 from app.events import bus
@@ -33,7 +38,7 @@ async def show_chats(message: Message, session: AsyncSession):
     """Инбокс: список чатов с непрочитанными (имя + тема + счётчик)."""
     me = await user_service.get_by_telegram_id(session, message.from_user.id)
     if me is None:
-        await message.answer("Сначала /start")
+        await message.answer(NOT_REGISTERED, reply_markup=register_button())
         return
     chats = await chat_service.list_user_chats(session, me.id)
     if not chats:
@@ -68,7 +73,7 @@ async def open_inbox_chat(callback: CallbackQuery, session: AsyncSession):
     chat_id = int(callback.data.split(":")[1])
     me = await user_service.get_by_telegram_id(session, callback.from_user.id)
     if me is None:
-        await callback.answer("Сначала /start", show_alert=True)
+        await callback.answer(NOT_REGISTERED, show_alert=True)
         return
     chat = await chat_service.get_chat_for_user(session, chat_id, me.id)
     if chat is None:
@@ -96,7 +101,7 @@ async def show_history(callback: CallbackQuery, session: AsyncSession):
     chat_id = int(callback.data.split(":")[1])
     me = await user_service.get_by_telegram_id(session, callback.from_user.id)
     if me is None:
-        await callback.answer("Сначала /start", show_alert=True)
+        await callback.answer(NOT_REGISTERED, show_alert=True)
         return
     chat = await chat_service.get_chat_for_user(session, chat_id, me.id)
     if chat is None:

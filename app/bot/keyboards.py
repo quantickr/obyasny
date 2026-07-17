@@ -5,6 +5,29 @@ from aiogram.types import (
     ReplyKeyboardMarkup,
 )
 
+from app.core.config import settings
+
+#: Текст отказа для незарегистрированных: боту можно пользоваться только после
+#: регистрации на сайте и привязки Telegram.
+NOT_REGISTERED = (
+    "👋 Сначала зарегистрируйтесь на сайте и привяжите Telegram в профиле — "
+    "после этого бот заработает. Нажмите /start."
+)
+
+
+def register_button() -> InlineKeyboardMarkup:
+    """Кнопка-ссылка на регистрацию для незарегистрированных пользователей."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="🌐 Зарегистрироваться на сайте",
+                    url=f"{settings.webapp_base_url}/register",
+                )
+            ]
+        ]
+    )
+
 
 def main_menu() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(

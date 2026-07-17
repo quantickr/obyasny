@@ -3,7 +3,7 @@ from aiogram.filters import CommandObject, CommandStart
 from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.bot.keyboards import main_menu
+from app.bot.keyboards import main_menu, register_button
 from app.services import linking_service, user_service
 
 router = Router()
@@ -37,22 +37,28 @@ async def start_with_code(
             await message.answer(f"⚠️ {e}")
 
     # Код невалиден/просрочен — обычный старт.
-    await _ensure_user(message, session)
+    await _require_registered(message, session)
 
 
 @router.message(CommandStart())
 async def start(message: Message, session: AsyncSession):
-    await _ensure_user(message, session)
+    await _require_registered(message, session)
 
 
-async def _ensure_user(message: Message, session: AsyncSession) -> None:
+async def _require_registered(message: Message, session: AsyncSession) -> None:
+    """Пускает в бота только зарегистрированных на сайте (есть аккаунт с этим
+    telegram_id). Новый пользователь НЕ создаётся — ему предлагаем регистрацию.
+    """
     tg = message.from_user
-    await user_service.get_or_create_telegram_user(
-        session,
-        telegram_id=tg.id,
-        telegram_username=tg.username,
-        display_name=tg.full_name,
-    )
+    me = await user_service.get_by_telegram_id(session, tg.id)
+    if me is None:
+        await message.answer(
+            "👋 Чтобы пользоваться ботом «Объясни!», сначала зарегистрируйтесь "
+            "на сайте — это займёт минуту. После регистрации привяжите Telegram "
+            "в профиле, и бот заработает.",
+            reply_markup=register_button(),
+        )
+        return
     await message.answer(
         "🎓 Привет! Это «Объясни!» — платформа взаимопомощи студентов.\n\n"
         "Найди, кто объяснит тебе тему, а взамен объясни свою или отблагодари "
