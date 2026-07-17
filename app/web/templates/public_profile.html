@@ -23,9 +23,7 @@
                     {{ profile_user.university }}{% if profile_user.course %} · {{ profile_user.course }} {% if profile_user.edu_level.value == 'schoolchild' %}класс{% else %}курс{% endif %}{% endif %}{% if profile_user.edu_level %} · {{ edu_ru[profile_user.edu_level.value] }}{% endif %}
                 </p>
                 {% endif %}
-                {% if profile_user.show_tg_username and profile_user.telegram_username %}
-                <a href="https://t.me/{{ profile_user.telegram_username }}" class="text-xs text-sky-600">@{{ profile_user.telegram_username }}</a>
-                {% endif %}
+                {# Контакт в Telegram виден только внутри чата, а не в публичном профиле. #}
             </div>
             {% if user and profile_user.id == user.id %}
             <span class="ml-auto text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded shrink-0">Это вы</span>

@@ -21,9 +21,6 @@
                 <span class="inline-block text-xs font-medium bg-orange-50 text-orange-700 px-2 py-0.5 rounded break-words">{{ student.university }}{% if student.course %} · {{ student.course }} {% if student.edu_level.value == 'schoolchild' %}класс{% else %}курс{% endif %}{% endif %}{% if student.edu_level %} · {{ edu_ru[student.edu_level.value] }}{% endif %}</span>
             </p>
             {% endif %}
-            {% if student.show_tg_username and student.telegram_username %}
-            <p class="text-xs text-sky-600">@{{ student.telegram_username }}</p>
-            {% endif %}
         </div>
         {% if user and student.id == user.id %}
         <span class="ml-auto text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded shrink-0">Это вы</span>

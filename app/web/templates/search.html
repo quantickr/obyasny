@@ -22,9 +22,7 @@
             <div>
                 <p class="font-medium">{{ teacher.display_name }}</p>
                 <p class="text-sm text-slate-500">Объяснит: {{ topic.name }}</p>
-                {% if teacher.show_tg_username and teacher.telegram_username %}
-                <p class="text-xs text-sky-600">@{{ teacher.telegram_username }}</p>
-                {% endif %}
+                {# Контакт в Telegram виден только внутри чата. #}
             </div>
         </div>
         <form method="post" action="/search/request" class="mt-3 space-y-2">
