@@ -11,6 +11,13 @@ from app.web.dependencies import CurrentUser, SessionDep
 router = APIRouter()
 
 
+def _safe_next(url: str) -> str:
+    """Разрешаем только относительные пути внутри сайта (защита от open redirect)."""
+    if url.startswith("/") and not url.startswith(("//", "/\\")):
+        return url
+    return "/board"
+
+
 @router.get("/search")
 async def search_page(q: str = ""):
     """Поиск переехал на доску. Прокидываем запрос в /board через редирект."""
@@ -51,9 +58,10 @@ async def send_request(
     except RequestError as e:
         if is_ajax:
             return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
-        sep = "&" if "?" in next_url else "?"
+        safe = _safe_next(next_url)
+        sep = "&" if "?" in safe else "?"
         return RedirectResponse(
-            url=f"{next_url}{sep}error={quote(str(e))}", status_code=303
+            url=f"{safe}{sep}error={quote(str(e))}", status_code=303
         )
     if is_ajax:
         return JSONResponse({"ok": True})
