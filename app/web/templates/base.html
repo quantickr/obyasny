@@ -120,6 +120,15 @@
         const badgeReq = document.getElementById('badge-requests');
         const toastBox = document.getElementById('toast-container');
         let prevMsg = null;
+        let prevChoc = null;
+
+        // Русская форма слова по числу: (1) шоколадка, (2) шоколадки, (5) шоколадок.
+        function plural(n, one, few, many) {
+            const n10 = n % 10, n100 = n % 100;
+            if (n10 === 1 && n100 !== 11) return one;
+            if (n10 >= 2 && n10 <= 4 && (n100 < 10 || n100 >= 20)) return few;
+            return many;
+        }
 
         function setBadge(el, n) {
             if (!el) return;
@@ -183,6 +192,21 @@
                     }
                 }
                 prevMsg = data.messages;
+                // Шоколадки: рост баланса — получил, падение — потратил/отдал.
+                if (typeof data.chocolates === 'number') {
+                    if (prevChoc !== null && data.chocolates !== prevChoc) {
+                        const diff = data.chocolates - prevChoc;
+                        const n = Math.abs(diff);
+                        const word = plural(n, 'шоколадку', 'шоколадки', 'шоколадок');
+                        if (diff > 0) {
+                            toast('🍫 Вы получили ' + n + ' ' + word);
+                        } else {
+                            toast('🍫 Вы потратили ' + n + ' ' + word);
+                        }
+                        beep();
+                    }
+                    prevChoc = data.chocolates;
+                }
             } catch (e) { /* сеть недоступна — пропускаем */ }
         }
 

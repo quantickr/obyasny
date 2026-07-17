@@ -34,14 +34,29 @@ UPLOAD_DIR = Path("/app/uploads")
 
 
 async def _ensure_admin() -> None:
-    """Назначает is_admin пользователю с email из настроек (если задан)."""
+    """Назначает суперадмина пользователю с email из настроек (если задан).
+
+    Суперадмин получает полный набор прав и возможность назначать мини-админов.
+    """
     email = settings.admin_email.strip().lower()
     if not email:
         return
     async with async_session_factory() as session:
         user = await user_service.get_by_email(session, email)
-        if user is not None and not user.is_admin:
-            user.is_admin = True
+        if user is None:
+            return
+        changed = False
+        for attr in (
+            "is_admin",
+            "is_superadmin",
+            "can_manage_reports",
+            "can_punish",
+            "can_edit_profiles",
+        ):
+            if not getattr(user, attr):
+                setattr(user, attr, True)
+                changed = True
+        if changed:
             await session.commit()
 
 

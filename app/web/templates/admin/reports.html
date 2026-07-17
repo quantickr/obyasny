@@ -8,42 +8,134 @@
     <a href="/admin" class="text-sm text-slate-500 hover:text-brand-600">← В админку</a>
 </div>
 
-<div class="flex gap-2 mb-4">
+{# Вкладки статуса #}
+<div class="flex gap-2 mb-2">
     {% for s in ['open', 'resolved', 'dismissed'] %}
-    <a href="/admin/reports?status={{ s }}"
+    <a href="/admin/reports?status={{ s }}{% if context %}&context={{ context }}{% endif %}"
        class="text-sm px-3 py-1.5 rounded-md {% if status == s %}bg-brand-500 text-white{% else %}bg-slate-100 text-slate-600 hover:bg-slate-200{% endif %}">
         {{ status_ru[s] }}
     </a>
     {% endfor %}
 </div>
 
+{# Вкладки контекста #}
+<div class="flex flex-wrap gap-2 mb-4">
+    <a href="/admin/reports?status={{ status }}"
+       class="text-xs px-3 py-1 rounded-full {% if not context %}bg-slate-700 text-white{% else %}bg-slate-100 text-slate-600 hover:bg-slate-200{% endif %}">Все</a>
+    {% for c in ['profile', 'board', 'chat'] %}
+    <a href="/admin/reports?status={{ status }}&context={{ c }}"
+       class="text-xs px-3 py-1 rounded-full {% if context == c %}bg-slate-700 text-white{% else %}bg-slate-100 text-slate-600 hover:bg-slate-200{% endif %}">
+        {{ ctx_ru[c] | capitalize }}
+    </a>
+    {% endfor %}
+</div>
+
 <div class="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
     {% for r in reports %}
-    <div class="p-4 flex items-start justify-between gap-3">
-        <div class="min-w-0">
-            <p class="text-sm">
-                <a href="/u/{{ r.reporter_id }}" class="font-semibold text-brand-600">{{ r.reporter.display_name if r.reporter else '—' }}</a>
-                → на
-                <a href="/u/{{ r.reported_user_id }}" class="font-semibold text-red-600">{{ r.reported.display_name if r.reported else '—' }}</a>
-                <span class="text-xs text-slate-400">({{ ctx_ru.get(r.context.value, r.context.value) }})</span>
-            </p>
-            {% if r.reason %}<p class="text-sm text-slate-600 break-words whitespace-pre-wrap mt-1">{{ r.reason }}</p>{% endif %}
-            {% if r.chat_id %}<a href="/chat/{{ r.chat_id }}" class="text-xs text-indigo-600">Открыть чат →</a>{% endif %}
+    <div class="p-4">
+        <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+                <p class="text-sm">
+                    <a href="/u/{{ r.reporter_id }}" class="font-semibold text-brand-600">{{ r.reporter.display_name if r.reporter else '—' }}</a>
+                    → на
+                    <a href="/u/{{ r.reported_user_id }}" class="font-semibold text-red-600">{{ r.reported.display_name if r.reported else '—' }}</a>
+                    <span class="text-xs text-slate-400">({{ ctx_ru.get(r.context.value, r.context.value) }})</span>
+                </p>
+                {% if r.reason %}<p class="text-sm text-slate-600 break-words whitespace-pre-wrap mt-1">{{ r.reason }}</p>{% endif %}
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+                {% if status == 'open' %}
+                    {% if user.is_superadmin or user.can_manage_reports %}
+                    <form method="post" action="/admin/reports/{{ r.id }}/resolve">
+                        <button class="text-xs bg-emerald-600 text-white px-2 py-1 rounded hover:bg-emerald-700">Решено</button>
+                    </form>
+                    <form method="post" action="/admin/reports/{{ r.id }}/dismiss">
+                        <button class="text-xs bg-slate-200 text-slate-700 px-2 py-1 rounded hover:bg-slate-300">Отклонить</button>
+                    </form>
+                    {% endif %}
+                    {% if user.is_superadmin or user.can_punish %}
+                    <form method="post" action="/admin/users/{{ r.reported_user_id }}/ban"
+                          onsubmit="return confirm('Забанить пользователя?');">
+                        <button class="text-xs bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700">Бан</button>
+                    </form>
+                    {% endif %}
+                {% else %}
+                <span class="text-xs text-slate-400">{{ status_ru[status] }}</span>
+                {% endif %}
+            </div>
         </div>
-        <div class="flex items-center gap-2 shrink-0">
-            {% if status == 'open' %}
-            <form method="post" action="/admin/reports/{{ r.id }}/resolve">
-                <button class="text-xs bg-emerald-600 text-white px-2 py-1 rounded hover:bg-emerald-700">Решено</button>
-            </form>
-            <form method="post" action="/admin/reports/{{ r.id }}/dismiss">
-                <button class="text-xs bg-slate-200 text-slate-700 px-2 py-1 rounded hover:bg-slate-300">Отклонить</button>
-            </form>
-            <form method="post" action="/admin/users/{{ r.reported_user_id }}/ban"
-                  onsubmit="return confirm('Забанить пользователя?');">
-                <button class="text-xs bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700">Бан</button>
-            </form>
-            {% else %}
-            <span class="text-xs text-slate-400">{{ status_ru[status] }}</span>
+
+        {# --- Мини-панель по контексту жалобы --- #}
+        <div class="mt-3 bg-slate-50 rounded-lg p-3 text-sm">
+            {% if r.context.value == 'profile' %}
+                {# Профиль: сброс аватара + правка данных #}
+                <div class="flex flex-wrap items-center gap-3">
+                    {% if user.is_superadmin or user.can_edit_profiles %}
+                    <form method="post" action="/admin/users/{{ r.reported_user_id }}/avatar/reset"
+                          onsubmit="return confirm('Сбросить аватар пользователя?');">
+                        <button class="text-xs bg-slate-200 text-slate-700 px-3 py-1 rounded hover:bg-slate-300">🔄 Сбросить аватар</button>
+                    </form>
+                    {% endif %}
+                    <a href="/admin/users/{{ r.reported_user_id }}" class="text-xs text-indigo-600 hover:underline">✎ Редактировать данные →</a>
+                </div>
+            {% elif r.context.value == 'board' %}
+                {# Доска: темы reported с возможностью удалить #}
+                {% set t = topics_by_user.get(r.reported_user_id) %}
+                {% if t %}
+                <div class="space-y-2">
+                    <div>
+                        <p class="text-xs text-slate-500 mb-1">Может объяснить</p>
+                        {% for ut in t.can_teach %}
+                        <div class="flex items-center justify-between gap-2 py-0.5">
+                            <span class="text-xs break-words">{{ ut.topic.name }}{% if ut.level %} · ур. {{ ut.level }}{% endif %} · 🍫{{ ut.price or 1 }}</span>
+                            {% if user.is_superadmin or user.can_edit_profiles %}
+                            <form method="post" action="/admin/users/{{ r.reported_user_id }}/topics/{{ ut.id }}/remove"
+                                  onsubmit="return confirm('Удалить тему?');">
+                                <button class="text-xs text-red-500 hover:text-red-700">удалить</button>
+                            </form>
+                            {% endif %}
+                        </div>
+                        {% else %}<p class="text-xs text-slate-400">Нет тем</p>{% endfor %}
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500 mb-1">Хочет узнать</p>
+                        {% for ut in t.wants_learn %}
+                        <div class="flex items-center justify-between gap-2 py-0.5">
+                            <span class="text-xs break-words">{{ ut.topic.name }}{% if ut.level %} · ур. {{ ut.level }}{% endif %}</span>
+                            {% if user.is_superadmin or user.can_edit_profiles %}
+                            <form method="post" action="/admin/users/{{ r.reported_user_id }}/topics/{{ ut.id }}/remove"
+                                  onsubmit="return confirm('Удалить тему?');">
+                                <button class="text-xs text-red-500 hover:text-red-700">удалить</button>
+                            </form>
+                            {% endif %}
+                        </div>
+                        {% else %}<p class="text-xs text-slate-400">Нет тем</p>{% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                <a href="/admin/users/{{ r.reported_user_id }}" class="text-xs text-indigo-600 hover:underline mt-1 inline-block">Карточка пользователя →</a>
+            {% elif r.context.value == 'chat' %}
+                {# Чат: открыть переписку + быстрый мут #}
+                <div class="flex flex-wrap items-center gap-3">
+                    {% if r.chat_id %}
+                    <a href="/chat/{{ r.chat_id }}" class="text-xs text-indigo-600 hover:underline">💬 Открыть чат →</a>
+                    {% else %}
+                    <span class="text-xs text-slate-400">Чат недоступен</span>
+                    {% endif %}
+                    {% if user.is_superadmin or user.can_punish %}
+                        {% if muted_by_user.get(r.reported_user_id) %}
+                        <form method="post" action="/admin/users/{{ r.reported_user_id }}/unmute">
+                            <button class="text-xs bg-emerald-600 text-white px-3 py-1 rounded hover:bg-emerald-700">Снять мут</button>
+                        </form>
+                        {% else %}
+                        <form method="post" action="/admin/users/{{ r.reported_user_id }}/mute">
+                            <input type="hidden" name="preset" value="1d">
+                            <button class="text-xs bg-purple-600 text-white px-3 py-1 rounded hover:bg-purple-700">Мут 1 день</button>
+                        </form>
+                        {% endif %}
+                    {% endif %}
+                    <a href="/admin/users/{{ r.reported_user_id }}" class="text-xs text-indigo-600 hover:underline">Карточка →</a>
+                </div>
             {% endif %}
         </div>
     </div>

@@ -8,7 +8,12 @@ from app.core.security import decode_session_token
 from app.events import bus
 from app.events.schemas import ChatEvent
 from app.models.chat import MessageSource
-from app.services import chat_service, request_service, user_service
+from app.services import (
+    chat_service,
+    chocolate_service,
+    request_service,
+    user_service,
+)
 from app.services.request_service import RequestError
 from app.web.dependencies import (
     SESSION_COOKIE,
@@ -40,12 +45,20 @@ async def _chat_sidebar(session, user, active_chat_id=None):
 
 @router.get("/api/unread")
 async def api_unread(user: CurrentUserOptional, session: SessionDep):
-    """Счётчики для навигации: непрочитанные сообщения и входящие заявки."""
+    """Счётчики для навигации: непрочитанные сообщения, входящие заявки,
+    баланс шоколадок (для уведомлений о начислении/трате на клиенте)."""
     if user is None:
-        return JSONResponse({"messages": 0, "requests": 0})
+        return JSONResponse({"messages": 0, "requests": 0, "chocolates": 0})
     messages = await chat_service.unread_total(session, user.id)
     requests_n = await request_service.incoming_count(session, user.id)
-    return JSONResponse({"messages": messages, "requests": requests_n})
+    chocolates = await chocolate_service.get_balance(session, user.id)
+    return JSONResponse(
+        {
+            "messages": messages,
+            "requests": requests_n,
+            "chocolates": chocolates,
+        }
+    )
 
 
 @router.get("/chats", response_class=HTMLResponse)

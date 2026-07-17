@@ -56,6 +56,13 @@ async def search_topics(
     return list(await session.scalars(stmt))
 
 
+def _clamp_price(price: int | None) -> int | None:
+    """Цена в шоколадках: диапазон 1..3. None остаётся None (трактуется как 1)."""
+    if price is None:
+        return None
+    return min(max(price, 1), 3)
+
+
 async def set_user_topic(
     session: AsyncSession,
     user_id: int,
@@ -63,9 +70,12 @@ async def set_user_topic(
     kind: TopicKind,
     level: int | None = None,
     details: str | None = None,
+    price: int | None = None,
 ) -> UserTopic:
     if level is not None:
         level = min(max(level, 1), 10)
+    # Цена — только для тем «могу объяснить»; для остальных обнуляем.
+    price = _clamp_price(price) if kind == TopicKind.can_teach else None
     # Подробности («Подробнее») применимы к обоим видам тем.
     # Чистим от пробелов; пустое описание — это отсутствие описания.
     cleaned_details = clean_text(details)
@@ -82,6 +92,7 @@ async def set_user_topic(
     if existing:
         existing.level = level
         existing.details = details
+        existing.price = price
         return existing
     ut = UserTopic(
         user_id=user_id,
@@ -89,6 +100,7 @@ async def set_user_topic(
         kind=kind,
         level=level,
         details=details,
+        price=price,
     )
     session.add(ut)
     try:
@@ -108,6 +120,7 @@ async def set_user_topic(
             raise
         found.level = level
         found.details = details
+        found.price = price
         return found
     return ut
 
@@ -129,6 +142,30 @@ async def update_user_topic_level(
     if ut is None:
         return None
     ut.level = level
+    return ut
+
+
+async def update_user_topic_price(
+    session: AsyncSession,
+    user_id: int,
+    user_topic_id: int,
+    price: int | None,
+) -> UserTopic | None:
+    """Меняет цену (в шоколадках) у своей темы «могу объяснить». Диапазон 1..3.
+
+    price=None очищает цену (трактуется как 1). Применяется только к темам
+    kind == can_teach; для остальных изменение игнорируется.
+    """
+    price = _clamp_price(price)
+    ut = await session.scalar(
+        select(UserTopic).where(
+            UserTopic.id == user_topic_id, UserTopic.user_id == user_id
+        )
+    )
+    if ut is None:
+        return None
+    if ut.kind == TopicKind.can_teach:
+        ut.price = price
     return ut
 
 

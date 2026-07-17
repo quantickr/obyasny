@@ -58,6 +58,9 @@ class UserTopic(Base, TimestampMixin):
     level: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     # Что именно непонятно (только для kind == wants_learn)
     details: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Цена в шоколадках за объяснение (только для kind == can_teach).
+    # None → цена не задана (трактуется как 1). Диапазон 1..3.
+    price: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
 
     user: Mapped["User"] = relationship(back_populates="user_topics")
     topic: Mapped["Topic"] = relationship()

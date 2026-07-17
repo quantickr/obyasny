@@ -36,39 +36,79 @@
     </div>
 </section>
 
-<!-- Как это работает -->
+<!-- Один способ найти: доска -->
 <section class="mt-14">
     <h2 class="text-center text-2xl font-extrabold mb-8">
-        Три способа найти <span class="brand-text-gradient">того, кто объяснит</span>
+        Один способ найти <span class="brand-text-gradient">того, кто объяснит</span> — доска
     </h2>
-    <div class="grid md:grid-cols-3 gap-6">
-        <div class="group bg-white p-6 rounded-2xl border border-brand-100 hover:shadow-soft hover:-translate-y-1 transition-all">
-            <div class="w-12 h-12 rounded-xl bg-brand-100 text-2xl grid place-items-center mb-4 group-hover:scale-110 transition-transform">🔍</div>
-            <h3 class="font-bold text-lg mb-1">Поиск + заявки</h3>
-            <p class="text-sm text-slate-600">Найди по теме того, кто объяснит, и отправь заявку на помощь.</p>
-        </div>
-        <div class="group bg-white p-6 rounded-2xl border border-brand-100 hover:shadow-soft hover:-translate-y-1 transition-all">
-            <div class="w-12 h-12 rounded-xl bg-brand-100 text-2xl grid place-items-center mb-4 group-hover:scale-110 transition-transform">📋</div>
-            <h3 class="font-bold text-lg mb-1">Доска объявлений</h3>
-            <p class="text-sm text-slate-600">«Умею объяснить X, хочу узнать Y» — публикуй и откликайся на других.</p>
-        </div>
-        <div class="group bg-white p-6 rounded-2xl border border-brand-100 hover:shadow-soft hover:-translate-y-1 transition-all">
-            <div class="w-12 h-12 rounded-xl bg-brand-100 text-2xl grid place-items-center mb-4 group-hover:scale-110 transition-transform">🤝</div>
-            <h3 class="font-bold text-lg mb-1">Авто-подбор пары</h3>
-            <p class="text-sm text-slate-600">Система сама найдёт взаимовыгодные пары: ты — мне, я — тебе.</p>
+    <div class="bg-white rounded-3xl border border-brand-100 p-8 sm:p-10 flex flex-col sm:flex-row items-center gap-8 shadow-soft">
+        <div class="text-7xl animate-floaty shrink-0">📋</div>
+        <div class="flex-1">
+            <h3 class="font-extrabold text-xl mb-2">Доска объявлений</h3>
+            <p class="text-slate-600 mb-4">
+                Всё в одном месте: находи по темам тех, кто может объяснить,
+                смотри, кто что хочет узнать, и откликайся в один клик. Опубликуй
+                свою анкету «умею объяснить X, хочу узнать Y» — и тебя тоже найдут.
+            </p>
+            <a href="/board" class="inline-block brand-gradient text-white px-6 py-3 rounded-full font-bold hover:opacity-90 transition-opacity shadow-lg">
+                Перейти на доску →
+            </a>
         </div>
     </div>
 </section>
 
-<!-- Шоколадки -->
-<section class="mt-12 bg-white rounded-2xl border border-brand-100 p-8 flex flex-col sm:flex-row items-center gap-6">
-    <div class="text-6xl animate-floaty">🍫</div>
-    <div>
-        <h3 class="font-extrabold text-xl mb-1">Шоколадки — валюта благодарности</h3>
-        <p class="text-slate-600 text-sm">
-            Нечем ответить взаимной темой? Скажи «спасибо» шоколадкой.
-            Копи их за помощь другим и трать, когда нужна помощь тебе.
-        </p>
+<!-- Что есть на сайте -->
+<section class="mt-14">
+    <h2 class="text-center text-2xl font-extrabold mb-8">
+        Что есть <span class="brand-text-gradient">на сайте</span>
+    </h2>
+    <div class="grid md:grid-cols-2 gap-6">
+        <div class="bg-white p-6 rounded-2xl border border-brand-100 flex gap-4">
+            <div class="text-3xl shrink-0">📋</div>
+            <div>
+                <h3 class="font-bold text-lg mb-1">Доска объявлений</h3>
+                <p class="text-sm text-slate-600">Поиск по темам и отклики: находи собеседников и предлагай свою помощь.</p>
+            </div>
+        </div>
+        <div class="bg-white p-6 rounded-2xl border border-brand-100 flex gap-4">
+            <div class="text-3xl shrink-0">💬</div>
+            <div>
+                <h3 class="font-bold text-lg mb-1">Чаты с собеседником</h3>
+                <p class="text-sm text-slate-600">Договаривайтесь и обсуждайте тему прямо на сайте — с уведомлениями о новых сообщениях.</p>
+            </div>
+        </div>
+        <div class="bg-white p-6 rounded-2xl border border-brand-100 flex gap-4">
+            <div class="text-3xl shrink-0">🍫</div>
+            <div>
+                <h3 class="font-bold text-lg mb-1">Шоколадки — валюта благодарности</h3>
+                <p class="text-sm text-slate-600">Нечем ответить взаимной темой? Скажи «спасибо» шоколадкой. Копи за помощь и трать, когда нужна помощь тебе.</p>
+            </div>
+        </div>
+        <div class="bg-white p-6 rounded-2xl border border-brand-100 flex gap-4">
+            <div class="text-3xl shrink-0">🎓</div>
+            <div>
+                <h3 class="font-bold text-lg mb-1">Профиль с темами и ценами</h3>
+                <p class="text-sm text-slate-600">Укажи, что умеешь объяснить и что хочешь узнать. На темы «могу объяснить» можно выставить цену в шоколадках.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Telegram-бот -->
+    <div class="mt-6 rounded-2xl brand-gradient text-white p-8 flex flex-col sm:flex-row items-center gap-6 shadow-soft">
+        <div class="text-6xl shrink-0 animate-floaty">🤖</div>
+        <div class="flex-1 text-center sm:text-left">
+            <h3 class="font-extrabold text-xl mb-1">Telegram-бот</h3>
+            <p class="text-white/90 text-sm">
+                Весь сайт — прямо в Telegram: переписывайся с собеседниками и получай
+                уведомления о новых сообщениях и заявках, не открывая браузер.
+                Сайт и Telegram синхронизированы — отвечай там, где удобно.
+            </p>
+        </div>
+        {% if bot_username %}
+        <a href="https://t.me/{{ bot_username }}" class="shrink-0 bg-white text-brand-700 px-7 py-3 rounded-full font-bold hover:bg-brand-50 transition-colors shadow-lg">
+            Открыть в Telegram
+        </a>
+        {% endif %}
     </div>
 </section>
 

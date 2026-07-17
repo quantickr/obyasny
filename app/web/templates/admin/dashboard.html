@@ -17,6 +17,12 @@
         <p class="text-2xl font-bold">→</p>
         <p class="text-xs text-slate-500">Пользователи</p>
     </a>
+    {% if user.is_superadmin %}
+    <a href="/admin/admins" class="bg-white p-4 rounded-xl border border-slate-200 hover:border-brand-300">
+        <p class="text-2xl font-bold">🛡️</p>
+        <p class="text-xs text-slate-500">Администраторы</p>
+    </a>
+    {% endif %}
 </div>
 
 <h2 class="font-semibold text-slate-600 mb-2">Последние жалобы</h2>

@@ -49,7 +49,9 @@ async def create_report(
 
 
 async def list_reports(
-    session: AsyncSession, status: ReportStatus = ReportStatus.open
+    session: AsyncSession,
+    status: ReportStatus = ReportStatus.open,
+    context: ReportContext | None = None,
 ) -> list[Report]:
     stmt = (
         select(Report)
@@ -60,6 +62,8 @@ async def list_reports(
         )
         .order_by(Report.created_at.desc())
     )
+    if context is not None:
+        stmt = stmt.where(Report.context == context)
     return list(await session.scalars(stmt))
 
 

@@ -105,3 +105,13 @@ async def get_current_admin(user: CurrentUser) -> User:
 
 
 CurrentAdmin = Annotated[User, Depends(get_current_admin)]
+
+
+async def get_current_superadmin(admin: CurrentAdmin) -> User:
+    """Требует прав главного администратора (управление админами)."""
+    if not admin.is_superadmin:
+        raise RequireAdminAccess()
+    return admin
+
+
+CurrentSuperadmin = Annotated[User, Depends(get_current_superadmin)]

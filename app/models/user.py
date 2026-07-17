@@ -95,6 +95,20 @@ class User(Base, TimestampMixin):
     is_admin: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False
     )
+    # Главный администратор: может всё + назначать/разжаловать других админов.
+    is_superadmin: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    # Гранулярные права мини-админов (суперадмин обходит их все).
+    can_manage_reports: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    can_punish: Mapped[bool] = mapped_column(  # бан / мут / блок профиля
+        Boolean, default=False, nullable=False
+    )
+    can_edit_profiles: Mapped[bool] = mapped_column(  # правка профиля/тем/аватара
+        Boolean, default=False, nullable=False
+    )
     # Забанен админом: жёсткая блокировка входа на сайт.
     is_banned: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False

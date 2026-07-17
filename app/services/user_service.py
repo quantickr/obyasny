@@ -179,6 +179,16 @@ async def list_users(
     return list(await session.scalars(stmt))
 
 
+async def list_admins(session: AsyncSession) -> list[User]:
+    """Все пользователи с доступом в админку (суперадмины первыми)."""
+    stmt = (
+        select(User)
+        .where(User.is_admin.is_(True))
+        .order_by(User.is_superadmin.desc(), User.id.asc())
+    )
+    return list(await session.scalars(stmt))
+
+
 async def count_users(session: AsyncSession) -> int:
     return int(await session.scalar(select(func.count(User.id))) or 0)
 
@@ -334,6 +344,57 @@ async def link_or_merge_telegram(
     await merge_service.merge_user_into(session, src_id=other.id, dst_id=user.id)
     await session.refresh(user)
     return user, True
+
+
+async def reset_avatar(session: AsyncSession, user_id: int) -> User | None:
+    """Сбрасывает аватар на дефолтный (инициал на градиенте).
+
+    Отдельный сеттер: в update_profile значение avatar_url=None означает
+    «не менять», поэтому сброс нельзя выразить через update_profile.
+    """
+    user = await session.get(User, user_id)
+    if user is None:
+        return None
+    user.avatar_url = None
+    await session.flush()
+    return user
+
+
+async def set_admin_rights(
+    session: AsyncSession,
+    user_id: int,
+    *,
+    is_admin: bool,
+    can_manage_reports: bool,
+    can_punish: bool,
+    can_edit_profiles: bool,
+) -> User | None:
+    """Назначает набор прав администратора (только суперадмином).
+
+    Bootstrap-суперадмина (email == ADMIN_EMAIL) нельзя разжаловать: его права
+    всегда остаются полными. Флаг is_superadmin через эту функцию не меняется.
+    """
+    from app.core.config import settings
+
+    user = await session.get(User, user_id)
+    if user is None:
+        return None
+    boot_email = settings.admin_email.strip().lower()
+    if user.email is not None and boot_email and user.email.lower() == boot_email:
+        # Главный админ по ADMIN_EMAIL — права не понижаем.
+        return user
+    user.is_admin = is_admin
+    if not is_admin:
+        # Снятие доступа в админку обнуляет и точечные права.
+        user.can_manage_reports = False
+        user.can_punish = False
+        user.can_edit_profiles = False
+    else:
+        user.can_manage_reports = can_manage_reports
+        user.can_punish = can_punish
+        user.can_edit_profiles = can_edit_profiles
+    await session.flush()
+    return user
 
 
 async def update_profile(

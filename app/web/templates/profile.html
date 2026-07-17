@@ -43,6 +43,13 @@
                      class="hidden absolute z-10 mt-1 left-0 bg-white border border-slate-200 rounded-md shadow-lg text-sm overflow-hidden">
                     <button type="button" id="avatar-choose"
                             class="block w-full text-left px-4 py-2 hover:bg-slate-100 whitespace-nowrap">Изменить фото</button>
+                    {% if user.avatar_url %}
+                    <form method="post" action="/profile/avatar/reset"
+                          onsubmit="return confirm('Сбросить аватар на стандартный?');">
+                        <button type="submit"
+                                class="block w-full text-left px-4 py-2 hover:bg-slate-100 whitespace-nowrap text-red-500">Сбросить аватар</button>
+                    </form>
+                    {% endif %}
                 </div>
             </div>
             <div>
@@ -183,6 +190,15 @@
                 <div class="flex items-center justify-between gap-2 text-sm">
                     <span class="min-w-0 break-words">{{ ut.topic.name }}</span>
                     <div class="flex items-center gap-2 shrink-0">
+                        <form method="post" action="/profile/topics/{{ ut.id }}/price">
+                            <select name="price" onchange="this.form.submit()"
+                                    title="Цена в шоколадках (1-3)"
+                                    class="border border-slate-300 rounded-md px-1.5 py-1 text-xs">
+                                {% for n in range(1, 4) %}
+                                <option value="{{ n }}" {% if (ut.price or 1) == n %}selected{% endif %}>🍫{{ n }}</option>
+                                {% endfor %}
+                            </select>
+                        </form>
                         <form method="post" action="/profile/topics/{{ ut.id }}/level">
                             <select name="level" onchange="this.form.submit()"
                                     title="Оценка (1-10)"
@@ -271,6 +287,12 @@
                     <input type="number" name="level" min="1" max="10" placeholder="Оценка"
                            title="Оценка за сессию/предмет (1-10), необязательно"
                            class="border border-slate-300 rounded-md px-2 py-2 text-sm w-24">
+                    <select name="price" id="topic-price" title="Цена в шоколадках (только для «Могу объяснить»)"
+                            class="border border-slate-300 rounded-md px-2 py-2 text-sm w-20">
+                        {% for n in range(1, 4) %}
+                        <option value="{{ n }}">🍫{{ n }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
                 <textarea name="details" id="topic-details" rows="2" placeholder="Подробнее"
                           class="w-full border border-slate-300 rounded-md px-3 py-2 text-sm"></textarea>
@@ -287,12 +309,19 @@
 (function () {
     const name = document.getElementById('topic-name');
     const extra = document.getElementById('topic-extra');
+    const kind = document.getElementById('topic-kind');
+    const price = document.getElementById('topic-price');
     if (!name || !extra) return;
     function sync() {
         extra.classList.toggle('hidden', name.value.trim().length === 0);
+        // Цена — только для «Могу объяснить».
+        if (kind && price) {
+            price.classList.toggle('hidden', kind.value !== 'can_teach');
+        }
     }
     name.addEventListener('input', sync);
     name.addEventListener('focus', sync);
+    if (kind) kind.addEventListener('change', sync);
     sync();
 })();
 

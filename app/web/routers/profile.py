@@ -155,6 +155,16 @@ async def upload_avatar(
     return RedirectResponse(url="/profile", status_code=303)
 
 
+@router.post("/profile/avatar/reset")
+async def reset_avatar(user: CurrentUser, session: SessionDep):
+    """Сброс своего аватара на дефолтный (инициал на градиенте)."""
+    if (r := _locked_redirect(user)) is not None:
+        return r
+    await user_service.reset_avatar(session, user.id)
+    await session.commit()
+    return RedirectResponse(url="/profile", status_code=303)
+
+
 @router.post("/profile/topics/add")
 async def add_topic(
     user: CurrentUser,
@@ -163,12 +173,14 @@ async def add_topic(
     kind: str = Form(...),
     level: str = Form(""),
     details: str = Form(""),
+    price: str = Form(""),
 ):
     if (r := _locked_redirect(user)) is not None:
         return r
     lvl = int(level) if level.isdigit() else None
     if lvl is not None:
         lvl = min(max(lvl, 1), 10)
+    price_val = int(price) if price.isdigit() else None
     try:
         topic = await topic_service.get_or_create_topic(session, topic_name)
         await topic_service.set_user_topic(
@@ -178,12 +190,30 @@ async def add_topic(
             TopicKind(kind),
             lvl,
             details=details or None,
+            price=price_val,
         )
         await session.commit()
     except ProfanityError as e:
         return RedirectResponse(
             url=f"/profile?error={quote(str(e))}", status_code=303
         )
+    return RedirectResponse(url="/profile", status_code=303)
+
+
+@router.post("/profile/topics/{user_topic_id}/price")
+async def update_topic_price(
+    user: CurrentUser,
+    session: SessionDep,
+    user_topic_id: int,
+    price: str = Form(""),
+):
+    if (r := _locked_redirect(user)) is not None:
+        return r
+    price_val = int(price) if price.isdigit() else None
+    await topic_service.update_user_topic_price(
+        session, user.id, user_topic_id, price_val
+    )
+    await session.commit()
     return RedirectResponse(url="/profile", status_code=303)
 
 

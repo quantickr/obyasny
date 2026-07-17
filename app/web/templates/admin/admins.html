@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Администраторы — Объясни!{% endblock %}
+{% block content %}
+<div class="flex items-center gap-3 mb-4">
+    <a href="/admin" class="text-sm text-slate-400 hover:text-brand-600">← Админ-панель</a>
+    <h1 class="text-xl font-bold">Администраторы</h1>
+</div>
+
+<p class="text-sm text-slate-500 mb-4">
+    Суперадмин выдаёт мини-админам точечные права. Чтобы назначить нового
+    администратора — откройте карточку пользователя и включите доступ в админку.
+</p>
+
+<div class="space-y-4">
+    {% for a in admins %}
+    <div class="bg-white rounded-xl border border-slate-200 p-4">
+        <div class="flex items-center justify-between gap-3 mb-3">
+            <div class="min-w-0">
+                <a href="/admin/users/{{ a.id }}" class="font-semibold text-brand-600 hover:underline">
+                    {{ a.display_name }}
+                </a>
+                <span class="text-xs text-slate-400">#{{ a.id }}{% if a.email %} · {{ a.email }}{% endif %}</span>
+                {% if a.is_superadmin %}
+                <span class="ml-1 text-[11px] bg-brand-100 text-brand-700 px-2 py-0.5 rounded-full">суперадмин</span>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if a.is_superadmin %}
+        <p class="text-sm text-slate-500">Полный доступ ко всем функциям (не редактируется).</p>
+        {% elif a.id == user.id %}
+        <p class="text-sm text-slate-500">Это вы — права нельзя изменить у себя.</p>
+        {% else %}
+        <form method="post" action="/admin/users/{{ a.id }}/rights"
+              class="flex flex-wrap items-center gap-4 text-sm">
+            <label class="flex items-center gap-2">
+                <input type="checkbox" name="is_admin" value="1" {% if a.is_admin %}checked{% endif %}
+                       class="rounded border-slate-300">
+                Доступ в админку
+            </label>
+            <label class="flex items-center gap-2">
+                <input type="checkbox" name="can_manage_reports" value="1" {% if a.can_manage_reports %}checked{% endif %}
+                       class="rounded border-slate-300">
+                Разбор жалоб
+            </label>
+            <label class="flex items-center gap-2">
+                <input type="checkbox" name="can_punish" value="1" {% if a.can_punish %}checked{% endif %}
+                       class="rounded border-slate-300">
+                Наказания (бан/мут/лок)
+            </label>
+            <label class="flex items-center gap-2">
+                <input type="checkbox" name="can_edit_profiles" value="1" {% if a.can_edit_profiles %}checked{% endif %}
+                       class="rounded border-slate-300">
+                Правка профилей/тем/аватара
+            </label>
+            <button class="brand-gradient text-white px-4 py-1.5 rounded-full hover:opacity-90">
+                Сохранить
+            </button>
+        </form>
+        {% endif %}
+    </div>
+    {% else %}
+    <p class="text-sm text-slate-400">Администраторов нет.</p>
+    {% endfor %}
+</div>
+{% endblock %}
