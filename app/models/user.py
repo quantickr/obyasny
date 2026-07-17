@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import enum
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     BigInteger,
     Boolean,
     CheckConstraint,
+    DateTime,
     Enum,
     Integer,
     SmallInteger,
@@ -76,6 +78,12 @@ class User(Base, TimestampMixin):
     # Денормализованный баланс (источник истины — chocolate_transactions)
     chocolate_balance: Mapped[int] = mapped_column(
         Integer, default=0, nullable=False
+    )
+
+    # Когда пользователю последний раз выдавали еженедельную шоколадку.
+    # Ленивая выдача (планировщика нет): начисляем при заходе на сайт.
+    last_weekly_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
     )
 
     # Пользователь добровольно выложен на доску (/board)

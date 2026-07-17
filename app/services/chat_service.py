@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import func, or_, select, update
+from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.chat import Chat, ChatContext, Message, MessageSource
@@ -34,6 +34,51 @@ async def get_or_create_chat(
     return chat
 
 
+async def create_request_chat(
+    session: AsyncSession,
+    user_a: int,
+    user_b: int,
+    title: str,
+    context_id: int,
+) -> Chat:
+    """Всегда создаёт НОВЫЙ чат под конкретную заявку (context=request).
+
+    В отличие от get_or_create_chat не переиспользует существующий чат пары —
+    на каждую принятую заявку заводится отдельный чат с заголовком «Тема + Имя».
+    """
+    u1, u2 = _order_pair(user_a, user_b)
+    chat = Chat(
+        user1_id=u1,
+        user2_id=u2,
+        context_type=ChatContext.request,
+        context_id=context_id,
+        title=title,
+    )
+    session.add(chat)
+    await session.flush()
+    return chat
+
+
+async def hide_chat(session: AsyncSession, chat_id: int, user_id: int) -> None:
+    """«Удаляет» чат только у текущего пользователя (у собеседника остаётся)."""
+    chat = await session.get(Chat, chat_id)
+    if chat is None:
+        return
+    if chat.user1_id == user_id:
+        chat.hidden_user1 = True
+    elif chat.user2_id == user_id:
+        chat.hidden_user2 = True
+    await session.flush()
+
+
+async def complete_chat(session: AsyncSession, chat_id: int) -> None:
+    """Помечает чат завершённым (read-only, серый, вниз списка)."""
+    chat = await session.get(Chat, chat_id)
+    if chat is not None and chat.completed_at is None:
+        chat.completed_at = datetime.now(timezone.utc)
+        await session.flush()
+
+
 async def get_chat_for_user(
     session: AsyncSession, chat_id: int, user_id: int
 ) -> Chat | None:
@@ -50,10 +95,22 @@ def other_participant(chat: Chat, user_id: int) -> int:
 
 
 async def list_user_chats(session: AsyncSession, user_id: int) -> list[Chat]:
+    """Чаты пользователя: незавершённые сверху, завершённые внизу.
+
+    Исключаем чаты, скрытые текущим пользователем (hidden_user1/2 по позиции).
+    """
     stmt = (
         select(Chat)
-        .where(or_(Chat.user1_id == user_id, Chat.user2_id == user_id))
-        .order_by(Chat.id.desc())
+        .where(
+            or_(Chat.user1_id == user_id, Chat.user2_id == user_id),
+            # Не показываем чаты, которые текущий юзер «удалил» у себя.
+            or_(
+                and_(Chat.user1_id == user_id, Chat.hidden_user1.is_(False)),
+                and_(Chat.user2_id == user_id, Chat.hidden_user2.is_(False)),
+            ),
+        )
+        # completed_at IS NULL сортируется как «меньше» → завершённые уходят вниз.
+        .order_by(Chat.completed_at.isnot(None), Chat.id.desc())
     )
     return list(await session.scalars(stmt))
 

@@ -5,12 +5,13 @@ from datetime import datetime
 
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     DateTime,
     Enum,
     ForeignKey,
     Index,
+    String,
     Text,
-    UniqueConstraint,
     func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -32,9 +33,8 @@ class MessageSource(str, enum.Enum):
 
 class Chat(Base, TimestampMixin):
     __tablename__ = "chats"
-    __table_args__ = (
-        UniqueConstraint("user1_id", "user2_id", name="uq_chat_users"),
-    )
+    # UNIQUE-ограничения на пару юзеров нет: на каждую принятую заявку
+    # создаётся отдельный чат (заголовок = «Тема + Имя»).
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     user1_id: Mapped[int] = mapped_column(
@@ -47,6 +47,23 @@ class Chat(Base, TimestampMixin):
         Enum(ChatContext, name="chat_context"), nullable=True
     )
     context_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+
+    # Заголовок чата = «Тема + Имя собеседника» (заполняется при создании чата
+    # из заявки). Для старых/direct-чатов может быть NULL.
+    title: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    # Задача завершена по обоюдному согласию: чат read-only, серый, уходит вниз.
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    # «Удаление» завершённого чата = скрытие только у себя (у собеседника остаётся).
+    hidden_user1: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    hidden_user2: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
 
 
 class Message(Base):

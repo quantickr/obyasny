@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.profanity import ensure_clean
 from app.core.security import hash_password, verify_password
 from app.models.user import EduLevel, User
+from app.services import chocolate_service
 
 
 class AuthError(Exception):
@@ -51,6 +52,8 @@ async def register_email(
     )
     session.add(user)
     await session.flush()
+    # Стартовый бонус: 5 шоколадок при регистрации.
+    await chocolate_service.award_signup_bonus(session, user.id)
     return user
 
 
@@ -128,6 +131,8 @@ async def get_or_create_telegram_user(
         if existing is None:
             raise
         return existing
+    # Стартовый бонус: 5 шоколадок при регистрации через Telegram.
+    await chocolate_service.award_signup_bonus(session, user.id)
     return user
 
 

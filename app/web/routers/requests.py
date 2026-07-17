@@ -15,6 +15,7 @@ async def requests_page(
 ):
     incoming = await request_service.incoming(session, user.id)
     outgoing = await request_service.outgoing(session, user.id)
+    active = await request_service.active(session, user.id)
     return templates.TemplateResponse(
         request,
         "requests.html",
@@ -22,6 +23,7 @@ async def requests_page(
             "user": user,
             "incoming": incoming,
             "outgoing": outgoing,
+            "active": active,
             "tab": tab,
         },
     )
@@ -56,6 +58,17 @@ async def decline(
     except RequestError:
         pass
     return RedirectResponse(url="/requests", status_code=303)
+
+
+@router.post("/requests/{request_id}/done")
+async def mark_done(request_id: int, user: CurrentUser, session: SessionDep):
+    """Отметить «Завершить». Задача закрывается по обоюдному согласию сторон."""
+    try:
+        await request_service.toggle_done(session, request_id, user.id)
+        await session.commit()
+    except RequestError:
+        pass
+    return RedirectResponse(url="/requests?tab=active", status_code=303)
 
 
 @router.post("/requests/{request_id}/decline-all")

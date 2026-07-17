@@ -20,6 +20,9 @@ class ChocolateReason(str, enum.Enum):
     bonus = "bonus"
     signup = "signup"
     manual = "manual"
+    spend = "spend"      # списание при отправке заявки
+    refund = "refund"    # возврат при отказе/отмене
+    weekly = "weekly"    # еженедельная выдача
 
 
 class ChocolateTransaction(Base, TimestampMixin):

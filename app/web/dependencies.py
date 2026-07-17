@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_session
 from app.core.security import decode_session_token
 from app.models.user import User
-from app.services import user_service
+from app.services import chocolate_service, user_service
 
 SESSION_COOKIE = "session"
 
@@ -57,6 +57,7 @@ CurrentUserUnverified = Annotated[
 
 async def get_current_user(
     user: CurrentUserOptional,
+    session: SessionDep,
 ) -> User:
     if user is None:
         raise RequireLoginRedirect()
@@ -64,6 +65,11 @@ async def get_current_user(
     # Telegram-аккаунты (email=None) не блокируются.
     if user.email is not None and not user.email_verified:
         raise RequireEmailVerification()
+    # Ленивая еженедельная выдача шоколадок (планировщика нет): начисляем
+    # при заходе на любую авторизованную страницу, если прошла неделя.
+    granted = await chocolate_service.grant_weekly_if_due(session, user)
+    if granted:
+        await session.commit()
     return user
 
 

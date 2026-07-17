@@ -30,6 +30,7 @@ async def profile_page(
     session: SessionDep,
     error: str = "",
     saved: str = "",
+    tg: str = "",
 ):
     user_topics = await topic_service.get_user_topics(session, user.id)
     can_teach = [ut for ut in user_topics if ut.kind == TopicKind.can_teach]
@@ -46,6 +47,7 @@ async def profile_page(
             "edu_levels": list(EduLevel),
             "error": error,
             "saved": saved == "1",
+            "tg": tg,
         },
     )
 
@@ -233,3 +235,18 @@ async def link_telegram(user: CurrentUser):
     code = await linking_service.generate_link_code(user.id)
     url = f"https://t.me/{settings.bot_username}?start={code}"
     return RedirectResponse(url=url, status_code=303)
+
+
+@router.post("/profile/unlink-telegram")
+async def unlink_telegram(user: CurrentUser, session: SessionDep):
+    """Отвязывает Telegram от аккаунта.
+
+    Требует наличия email — иначе нарушится CHECK ck_user_has_login_method
+    (у пользователя должен остаться хотя бы один способ входа).
+    """
+    if not user.email:
+        return RedirectResponse(url="/profile?tg=need_email", status_code=303)
+    user.telegram_id = None
+    user.telegram_username = None
+    await session.commit()
+    return RedirectResponse(url="/profile?tg=unlinked", status_code=303)

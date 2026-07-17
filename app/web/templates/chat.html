@@ -14,7 +14,7 @@
         {% set un = unread.get(c.id, 0) %}
         {% set lm = last.get(c.id) %}
         <a href="/chat/{{ c.id }}"
-           class="flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 transition-colors {% if c.id == chat.id %}bg-brand-50{% endif %}">
+           class="flex items-center gap-2 px-3 py-2.5 hover:bg-slate-50 transition-colors {% if c.id == chat.id %}bg-brand-50{% endif %} {% if c.completed_at %}opacity-60 grayscale{% endif %}">
             {% if p and p.avatar_url %}
             <img src="{{ p.avatar_url }}" alt="" class="w-9 h-9 rounded-full object-cover border border-slate-200 shrink-0">
             {% else %}
@@ -23,8 +23,10 @@
             </span>
             {% endif %}
             <div class="min-w-0 flex-1">
-                <p class="text-sm font-medium truncate">{{ p.display_name if p else 'Собеседник' }}</p>
-                <p class="text-xs text-slate-400 truncate">{% if lm %}{{ lm.body }}{% else %}—{% endif %}</p>
+                <p class="text-sm font-medium truncate">{{ c.title if c.title else (p.display_name if p else 'Собеседник') }}</p>
+                <p class="text-xs text-slate-400 truncate">
+                    {% if c.completed_at %}✓ завершено{% elif lm %}{{ lm.body }}{% else %}—{% endif %}
+                </p>
             </div>
             {% if un %}
             <span class="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[11px] leading-[18px] text-center">{{ un }}</span>
@@ -34,18 +36,43 @@
     </div>
 </aside>
 
-<div class="flex-1 min-w-0 bg-white rounded-xl border border-slate-200 flex flex-col">
-    <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+<div class="flex-1 min-w-0 {% if completed %}bg-slate-100{% else %}bg-white{% endif %} rounded-xl border border-slate-200 flex flex-col">
+    <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between gap-2">
         <div class="flex items-center gap-2 min-w-0">
             <a href="/chats" class="md:hidden text-slate-400 hover:text-brand-600 shrink-0" title="К чатам">←</a>
             <div class="min-w-0">
-                <p class="font-semibold truncate">{{ partner.display_name if partner else 'Собеседник' }}</p>
+                {% if chat.title %}
+                <p class="font-semibold truncate">{{ chat.title }}</p>
+                {% endif %}
+                {% if partner %}
+                <a href="/u/{{ partner.id }}" class="text-sm text-slate-500 hover:text-brand-600 hover:underline truncate block">
+                    {{ partner.display_name }}
+                </a>
+                {% else %}
+                <p class="text-sm text-slate-500">Собеседник</p>
+                {% endif %}
                 {% if partner and partner.show_tg_username and partner.telegram_username %}
                 <a href="https://t.me/{{ partner.telegram_username }}" class="text-xs text-sky-600">@{{ partner.telegram_username }}</a>
                 {% endif %}
             </div>
         </div>
-        <span class="text-[11px] text-slate-400 shrink-0">{{ ctx_ru.get(chat.context_type.value, '') if chat.context_type else '' }}</span>
+        <div class="flex items-center gap-2 shrink-0">
+            {% if completed %}
+            <span class="text-xs font-medium text-slate-500">✓ Завершено</span>
+            <form method="post" action="/chat/{{ chat.id }}/hide"
+                  onsubmit="return confirm('Удалить чат у себя? У собеседника он останется.');">
+                <button type="submit" class="text-xs text-red-500 hover:text-red-700">Удалить</button>
+            </form>
+            {% elif request and request.status.value == 'accepted' %}
+            {% if my_done %}
+            <span class="text-xs text-amber-600">Вы завершили, ждём собеседника…</span>
+            {% else %}
+            <form method="post" action="/chat/{{ chat.id }}/done">
+                <button type="submit" class="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-md hover:bg-emerald-700">Завершить</button>
+            </form>
+            {% endif %}
+            {% endif %}
+        </div>
     </div>
     <div id="messages" class="flex-1 overflow-y-auto p-4 space-y-2">
         {% for m in messages %}
@@ -61,11 +88,17 @@
         </div>
         {% endfor %}
     </div>
+    {% if completed %}
+    <div class="p-3 border-t border-slate-200 text-center text-sm text-slate-400">
+        Задача завершена — чат доступен только для чтения.
+    </div>
+    {% else %}
     <form id="chat-form" class="p-3 border-t border-slate-200 flex gap-2 items-end">
         <textarea id="chat-input" rows="1" placeholder="Сообщение..." autocomplete="off"
                   class="flex-1 border border-slate-300 rounded-md px-3 py-2 resize-none max-h-32 overflow-y-auto"></textarea>
         <button type="submit" class="bg-indigo-600 text-white px-5 py-2 rounded-md hover:bg-indigo-700">→</button>
     </form>
+    {% endif %}
 </div>
 </div>
 {% endblock %}
@@ -76,6 +109,8 @@
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
     const box = document.getElementById('messages');
     const input = document.getElementById('chat-input');
+    const chatForm = document.getElementById('chat-form');
+    const readOnly = !chatForm;  // завершённый чат: формы ввода нет
     let ws = null;
 
     function addMessage(body, mine, src, replyPreview) {
@@ -126,24 +161,27 @@
         input.style.height = 'auto';
     }
 
-    // Enter = отправить, Shift+Enter = перенос строки.
-    input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
+    // Завершённый чат — только чтение: слушатели ввода не навешиваем.
+    if (!readOnly) {
+        // Enter = отправить, Shift+Enter = перенос строки.
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                send();
+            }
+        });
+
+        // Авто-высота textarea под содержимое.
+        input.addEventListener('input', () => {
+            input.style.height = 'auto';
+            input.style.height = Math.min(input.scrollHeight, 128) + 'px';
+        });
+
+        chatForm.addEventListener('submit', (e) => {
             e.preventDefault();
             send();
-        }
-    });
-
-    // Авто-высота textarea под содержимое.
-    input.addEventListener('input', () => {
-        input.style.height = 'auto';
-        input.style.height = Math.min(input.scrollHeight, 128) + 'px';
-    });
-
-    document.getElementById('chat-form').addEventListener('submit', (e) => {
-        e.preventDefault();
-        send();
-    });
+        });
+    }
 
     box.scrollTop = box.scrollHeight;
 </script>

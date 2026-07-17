@@ -1,8 +1,36 @@
 {% extends "base.html" %}
 {% block title %}Заявки — Объясни!{% endblock %}
 {% block content %}
-{% set status_ru = {'pending': 'ожидает', 'accepted': 'принята', 'declined': 'отклонена', 'cancelled': 'отменена'} %}
+{% set status_ru = {'pending': 'ожидает', 'accepted': 'принята', 'declined': 'отклонена', 'cancelled': 'отменена', 'completed': 'завершена'} %}
 <h1 class="text-xl font-bold mb-4">Заявки</h1>
+
+{% if active %}
+<h2 class="font-semibold text-slate-600 mb-2">В работе</h2>
+<div class="space-y-2 mb-6">
+    {% for req in active %}
+    {% set other = req.receiver if req.sender_id == user.id else req.sender %}
+    {% set my_done = req.sender_done if req.sender_id == user.id else req.receiver_done %}
+    <div class="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between gap-3">
+        <p class="text-sm min-w-0">
+            <a href="/u/{{ other.id }}" class="font-semibold text-brand-600 hover:text-brand-700 break-words">{{ other.display_name }}</a>
+            · тема <b class="break-words">{{ req.topic.name }}</b>
+        </p>
+        <div class="flex items-center gap-2 shrink-0">
+            {% if req.chat_id %}
+            <a href="/chat/{{ req.chat_id }}" class="text-indigo-600 text-sm">Чат →</a>
+            {% endif %}
+            {% if my_done %}
+            <span class="text-xs text-amber-600">Вы завершили, ждём…</span>
+            {% else %}
+            <form method="post" action="/requests/{{ req.id }}/done">
+                <button class="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-md hover:bg-emerald-700">Завершить</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
 
 <h2 class="font-semibold text-slate-600 mb-2">Входящие</h2>
 <div class="space-y-2 mb-6">
@@ -62,6 +90,7 @@
         </p>
         <span class="text-xs px-2 py-1 rounded
             {% if req.status.value == 'accepted' %}bg-green-100 text-green-700
+            {% elif req.status.value == 'completed' %}bg-emerald-100 text-emerald-700
             {% elif req.status.value == 'declined' %}bg-red-100 text-red-700
             {% else %}bg-slate-100 text-slate-600{% endif %}">
             {{ status_ru.get(req.status.value, req.status.value) }}

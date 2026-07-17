@@ -7,6 +7,7 @@ from app.events import bus
 from app.events.schemas import ChatEvent
 from app.models.chat import MessageSource
 from app.services import chat_service, request_service, user_service
+from app.services.request_service import RequestError
 from app.web.dependencies import (
     SESSION_COOKIE,
     CurrentUser,
@@ -82,6 +83,17 @@ async def chat_page(
     # Открытие чата помечает входящие сообщения прочитанными.
     await chat_service.mark_chat_read(session, chat_id, user.id)
     await session.commit()
+
+    # Связанная заявка (если чат создан из заявки) — для кнопки «Завершить».
+    req = None
+    my_done = False
+    if chat.context_id is not None:
+        req = await request_service.get_request(session, chat.context_id)
+        if req is not None:
+            my_done = (
+                req.sender_done if user.id == req.sender_id else req.receiver_done
+            )
+
     chats, partners, unread, last = await _chat_sidebar(session, user)
     return templates.TemplateResponse(
         request,
@@ -95,8 +107,33 @@ async def chat_page(
             "partners": partners,
             "unread": unread,
             "last": last,
+            "request": req,
+            "my_done": my_done,
+            "completed": chat.completed_at is not None,
         },
     )
+
+
+@router.post("/chat/{chat_id}/done")
+async def chat_done(chat_id: int, user: CurrentUser, session: SessionDep):
+    """Кнопка «Завершить» в окне чата → завершение по обоюдному согласию."""
+    chat = await chat_service.get_chat_for_user(session, chat_id, user.id)
+    if chat is None or chat.context_id is None:
+        return RedirectResponse(url=f"/chat/{chat_id}", status_code=303)
+    try:
+        await request_service.toggle_done(session, chat.context_id, user.id)
+        await session.commit()
+    except RequestError:
+        pass
+    return RedirectResponse(url=f"/chat/{chat_id}", status_code=303)
+
+
+@router.post("/chat/{chat_id}/hide")
+async def chat_hide(chat_id: int, user: CurrentUser, session: SessionDep):
+    """«Удалить» завершённый чат = скрыть только у себя."""
+    await chat_service.hide_chat(session, chat_id, user.id)
+    await session.commit()
+    return RedirectResponse(url="/chats", status_code=303)
 
 
 @router.websocket("/ws/chat/{chat_id}")
@@ -122,6 +159,12 @@ async def chat_ws(websocket: WebSocket, chat_id: int):
             if not body:
                 continue
             async with async_session_factory() as session:
+                # В завершённый чат писать нельзя (read-only).
+                chat = await chat_service.get_chat_for_user(
+                    session, chat_id, user_id
+                )
+                if chat is None or chat.completed_at is not None:
+                    continue
                 msg = await chat_service.save_message(
                     session,
                     chat_id=chat_id,

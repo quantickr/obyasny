@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     DateTime,
     Enum,
     ForeignKey,
@@ -32,6 +33,7 @@ class RequestStatus(str, enum.Enum):
     accepted = "accepted"
     declined = "declined"
     cancelled = "cancelled"
+    completed = "completed"
 
 
 class Request(Base, TimestampMixin):
@@ -75,6 +77,18 @@ class Request(Base, TimestampMixin):
         DateTime(timezone=True), nullable=True
     )
     blocked_until: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    # Завершение по обоюдному согласию: обе стороны жмут «Завершить».
+    # Когда оба флага True → status=completed, объясняющему +1 шоколадка.
+    sender_done: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    receiver_done: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 

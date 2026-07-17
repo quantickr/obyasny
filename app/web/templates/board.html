@@ -22,7 +22,7 @@
 
 {% macro board_card(card, user) %}
 {% set student = card.student %}
-<div class="bg-white p-5 rounded-xl border border-slate-200
+<div class="bg-white p-5 rounded-xl border border-slate-200 mb-5 break-inside-avoid
     {% if card.match_kind == 3 %}ring-2 ring-brand-400{% endif %}">
     <div class="flex items-center gap-3 mb-3">
         <a href="/u/{{ student.id }}" class="shrink-0">
@@ -129,28 +129,28 @@
 
 {% if perfect %}
 <h2 class="text-lg font-bold mb-3">Идеальные пары для вас</h2>
-<div class="grid md:grid-cols-2 gap-5 mb-8 items-start">
+<div class="md:columns-2 gap-5 mb-8">
     {% for card in perfect %}{{ board_card(card, user) }}{% endfor %}
 </div>
 {% endif %}
 
 {% if can_help_me %}
 <h2 class="text-lg font-bold mb-3">Могут вам помочь</h2>
-<div class="grid md:grid-cols-2 gap-5 mb-8 items-start">
+<div class="md:columns-2 gap-5 mb-8">
     {% for card in can_help_me %}{{ board_card(card, user) }}{% endfor %}
 </div>
 {% endif %}
 
 {% if i_can_help %}
 <h2 class="text-lg font-bold mb-3">Вы можете помочь</h2>
-<div class="grid md:grid-cols-2 gap-5 mb-8 items-start">
+<div class="md:columns-2 gap-5 mb-8">
     {% for card in i_can_help %}{{ board_card(card, user) }}{% endfor %}
 </div>
 {% endif %}
 
 {% if rest %}
 <h2 class="text-lg font-bold mb-3">Остальные студенты</h2>
-<div class="grid md:grid-cols-2 gap-5 items-start">
+<div class="md:columns-2 gap-5">
     {% for card in rest %}{{ board_card(card, user) }}{% endfor %}
 </div>
 {% endif %}
