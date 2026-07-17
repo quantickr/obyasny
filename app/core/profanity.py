@@ -332,6 +332,43 @@ class GibberishError(ProfanityError):
         super().__init__(message)
 
 
+#: Сообщение при пустом (или состоящем только из пробелов) вводе.
+EMPTY_MESSAGE = "Вы вводите пустой ввод."
+
+
+class EmptyInputError(ProfanityError):
+    """Поднимается, когда после очистки от пробелов ввод оказался пустым.
+
+    Наследуется от ProfanityError, чтобы существующие обработчики
+    `except ProfanityError` в роутерах ловили и этот случай.
+    """
+
+    def __init__(self, message: str = EMPTY_MESSAGE):
+        super().__init__(message)
+
+
+def clean_text(text: str | None) -> str:
+    """Убирает пробелы и прочие «пустые» символы по краям и внутри.
+
+    Схлопывает любые последовательности пробельных символов (пробелы,
+    табы, переводы строк, неразрывные пробелы и т.п.) в один пробел и
+    обрезает края. Пустой/None превращает в пустую строку.
+    """
+    if not text:
+        return ""
+    # \s покрывает обычные пробелы; добавляем неразрывный/специальные.
+    collapsed = re.sub(r"[\s\u00a0\u2000-\u200b\ufeff]+", " ", text)
+    return collapsed.strip()
+
+
+def ensure_nonempty(text: str | None) -> str:
+    """Очищает ввод от пробелов и поднимает EmptyInputError, если пусто."""
+    cleaned = clean_text(text)
+    if not cleaned:
+        raise EmptyInputError()
+    return cleaned
+
+
 def _looks_like_gibberish(text: str) -> bool:
     """Похоже ли название на бессмысленный набор букв.
 
@@ -399,16 +436,18 @@ def _looks_like_gibberish(text: str) -> bool:
     return False
 
 
-def ensure_adequate(text: str | None) -> str | None:
-    """Проверяет и мат, и осмысленность (для названий тем).
+def ensure_adequate(text: str | None) -> str:
+    """Проверяет пустоту, мат и осмысленность (для названий тем).
 
-    Сначала — фильтр мата/угроз, затем — эвристика на бессмысленный
-    набор букв. Возвращает text либо поднимает соответствующую ошибку.
+    Сначала — очистка от пробелов и проверка на пустоту, затем фильтр
+    мата/угроз, затем эвристика на бессмысленный набор букв. Возвращает
+    очищенный text либо поднимает соответствующую ошибку.
     """
-    ensure_clean(text)
-    if text and _looks_like_gibberish(text):
+    cleaned = ensure_nonempty(text)
+    ensure_clean(cleaned)
+    if _looks_like_gibberish(cleaned):
         raise GibberishError()
-    return text
+    return cleaned
 
 
 def censor(text: str | None) -> str | None:

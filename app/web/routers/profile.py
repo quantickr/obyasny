@@ -183,6 +183,25 @@ async def update_topic_level(
     return RedirectResponse(url="/profile", status_code=303)
 
 
+@router.post("/profile/topics/{user_topic_id}/details")
+async def update_topic_details(
+    user: CurrentUser,
+    session: SessionDep,
+    user_topic_id: int,
+    details: str = Form(""),
+):
+    try:
+        await topic_service.update_user_topic_details(
+            session, user.id, user_topic_id, details or None
+        )
+        await session.commit()
+    except ProfanityError as e:
+        return RedirectResponse(
+            url=f"/profile?error={quote(str(e))}", status_code=303
+        )
+    return RedirectResponse(url="/profile", status_code=303)
+
+
 @router.post("/profile/topics/{user_topic_id}/remove")
 async def remove_topic(
     user: CurrentUser, session: SessionDep, user_topic_id: int

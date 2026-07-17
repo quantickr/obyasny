@@ -196,6 +196,16 @@
                 {% if ut.details %}
                 <p class="text-xs text-slate-500 mt-0.5 break-words whitespace-pre-wrap">{{ ut.details }}</p>
                 {% endif %}
+                <details class="mt-0.5">
+                    <summary class="text-xs text-brand-600 cursor-pointer select-none hover:text-brand-700">
+                        {% if ut.details %}Изменить описание{% else %}Добавить описание{% endif %}
+                    </summary>
+                    <form method="post" action="/profile/topics/{{ ut.id }}/details" class="mt-1 space-y-1">
+                        <textarea name="details" rows="2" placeholder="Описание темы"
+                                  class="w-full border border-slate-300 rounded-md px-2 py-1.5 text-xs">{{ ut.details or '' }}</textarea>
+                        <button class="text-xs bg-slate-700 text-white px-3 py-1 rounded-md hover:bg-slate-800">Сохранить</button>
+                    </form>
+                </details>
             </div>
             {% else %}
             <p class="text-sm text-slate-400">Пока пусто</p>
@@ -226,6 +236,16 @@
                 {% if ut.details %}
                 <p class="text-xs text-slate-500 mt-0.5 break-words whitespace-pre-wrap">{{ ut.details }}</p>
                 {% endif %}
+                <details class="mt-0.5">
+                    <summary class="text-xs text-brand-600 cursor-pointer select-none hover:text-brand-700">
+                        {% if ut.details %}Изменить описание{% else %}Добавить описание{% endif %}
+                    </summary>
+                    <form method="post" action="/profile/topics/{{ ut.id }}/details" class="mt-1 space-y-1">
+                        <textarea name="details" rows="2" placeholder="Описание темы"
+                                  class="w-full border border-slate-300 rounded-md px-2 py-1.5 text-xs">{{ ut.details or '' }}</textarea>
+                        <button class="text-xs bg-slate-700 text-white px-3 py-1 rounded-md hover:bg-slate-800">Сохранить</button>
+                    </form>
+                </details>
             </div>
             {% else %}
             <p class="text-sm text-slate-400">Пока пусто</p>
