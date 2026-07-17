@@ -396,6 +396,12 @@ async def toggle_done(
         req.completed_at = datetime.now(timezone.utc)
         if req.chat_id is not None:
             await chat_service.complete_chat(session, req.chat_id)
+        # Рейтинг объясняющему (receiver) за завершённое объяснение: +1, а за
+        # бесплатное (price == 0) → +2 (поощряем бесплатную помощь). Не зависит
+        # от способа оплаты (обмен темами тоже даёт +1, т.к. price по умолчанию 1).
+        receiver = await session.get(User, req.receiver_id)
+        if receiver is not None:
+            receiver.rating += 2 if req.price == 0 else 1
         # Награда объясняющему (receiver) — только для оплаты шоколадками, в
         # размере зафиксированной цены заявки. При цене 0 (бесплатно) награды нет.
         if req.offer_type == OfferType.chocolates and req.price > 0:

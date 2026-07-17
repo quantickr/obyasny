@@ -132,7 +132,17 @@ async def resolve_report(
     report_id: int, admin: CurrentAdmin, session: SessionDep
 ):
     _require(admin, "can_manage_reports")
-    await report_service.resolve(session, report_id)
+    # Доказанная жалоба меняет рейтинг: виноватому −5, репортёру +1.
+    # resolve() возвращает Report только при первом разрешении (open→resolved),
+    # поэтому повторное «Разрешить» рейтинг не начислит дважды.
+    report = await report_service.resolve(session, report_id)
+    if report is not None:
+        guilty = await session.get(User, report.reported_user_id)
+        reporter = await session.get(User, report.reporter_id)
+        if guilty is not None:
+            guilty.rating -= 5
+        if reporter is not None:
+            reporter.rating += 1
     await session.commit()
     return RedirectResponse(url="/admin/reports", status_code=303)
 

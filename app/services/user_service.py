@@ -16,13 +16,15 @@ class AuthError(Exception):
 
 #: Максимальный номер курса/класса по уровню образования.
 #: schoolchild — 11 классов, bachelor — 5, specialist — 6, master — 3,
-#: postgrad — 4. Значение по умолчанию (11) — на случай неизвестного уровня.
+#: postgrad — 4, graduate — 1 (выпустившийся, курс не показывается).
+#: Значение по умолчанию (11) — на случай неизвестного уровня.
 MAX_COURSE_BY_LEVEL: dict[EduLevel, int] = {
     EduLevel.schoolchild: 11,
     EduLevel.bachelor: 5,
     EduLevel.specialist: 6,
     EduLevel.master: 3,
     EduLevel.postgrad: 4,
+    EduLevel.graduate: 1,
 }
 
 
@@ -422,6 +424,9 @@ async def update_profile(
         # Валидируем курс по итоговому уровню (только что заданному или текущему),
         # чтобы, например, у бакалавра нельзя было выставить 8-й курс.
         user.course = clamp_course(course, user.edu_level)
+    # У выпустившегося курса нет — фиксируем 1 даже если форма его не прислала.
+    if user.edu_level == EduLevel.graduate:
+        user.course = 1
     if avatar_url is not None:
         user.avatar_url = avatar_url
     return user

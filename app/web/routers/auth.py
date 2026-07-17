@@ -216,6 +216,7 @@ async def verify_email_page(
     # Нет email или уже подтверждён — здесь делать нечего.
     if user.email is None or user.email_verified:
         return RedirectResponse(url="/profile", status_code=303)
+    resend_after = await email_verify_service.cooldown_ttl(user.id)
     return templates.TemplateResponse(
         request,
         "auth/verify_email.html",
@@ -224,6 +225,7 @@ async def verify_email_page(
             "email_masked": _mask_email(user.email),
             "error": error,
             "notice": notice,
+            "resend_after": resend_after,
         },
     )
 

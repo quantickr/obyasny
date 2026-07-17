@@ -41,6 +41,16 @@ async def issue_code(user_id: int, email: str) -> str:
     return code
 
 
+async def cooldown_ttl(user_id: int) -> int:
+    """Сколько секунд осталось до возможности повторной отправки кода.
+
+    0 — можно слать сразу (cooldown истёк/отсутствует). Используется для
+    отрисовки обратного отсчёта на странице подтверждения почты.
+    """
+    ttl = await redis_client.ttl(_cooldown_key(user_id))
+    return ttl if ttl and ttl > 0 else 0
+
+
 async def verify_code(user_id: int, code: str) -> str | None:
     """Сверяет код. При успехе удаляет запись и возвращает подтверждённый email.
 

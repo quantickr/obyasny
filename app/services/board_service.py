@@ -136,14 +136,15 @@ async def list_board_cards_ranked(
 
 
 async def can_publish(session: AsyncSession, user_id: int) -> bool:
-    """Можно ли выложиться на доску: нужна ≥1 тема «могу объяснить» И ≥1
-    «хочу узнать». Доска — про взаимный обмен, поэтому обе стороны обязательны.
+    """Можно ли выложиться на доску: достаточно ≥1 темы «могу объяснить».
+    Тема «хочу узнать» не обязательна — можно выкладываться только как
+    объясняющий.
     """
     rows = await session.scalars(
         select(UserTopic.kind).where(UserTopic.user_id == user_id)
     )
     kinds = set(rows)
-    return TopicKind.can_teach in kinds and TopicKind.wants_learn in kinds
+    return TopicKind.can_teach in kinds
 
 
 async def toggle_board(session: AsyncSession, user: User) -> bool:

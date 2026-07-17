@@ -50,8 +50,9 @@ async def profile_page(
             "tg": tg,
             "profile_locked": user_service.is_profile_locked(user),
             "profile_locked_until": user.profile_locked_until,
-            # На доску можно только с ≥1 «могу объяснить» и ≥1 «хочу узнать».
-            "can_publish_board": bool(can_teach) and bool(wants_learn),
+            # На доску можно с ≥1 темой «могу объяснить» (взамен обязательного
+            # «хочу узнать» больше нет — можно выкладываться только объясняющим).
+            "can_publish_board": bool(can_teach),
             # Регистрировался по почте (есть email), но ещё не привязал
             # Telegram → предлагаем привязку модалкой, чтобы работал бот.
             "suggest_link_tg": bool(user.email) and not user.telegram_id,
@@ -277,13 +278,13 @@ async def toggle_board(user: CurrentUser, session: SessionDep):
 
     if (r := _locked_redirect(user)) is not None:
         return r
-    # Публикация возможна только при ≥1 «могу объяснить» и ≥1 «хочу узнать».
+    # Публикация возможна при ≥1 теме «могу объяснить».
     if not user.on_board and not await board_service.can_publish(
         session, user.id
     ):
         msg = (
             "Чтобы выложиться на доску, добавьте хотя бы одну тему "
-            "«могу объяснить» и одну «хочу узнать»."
+            "«могу объяснить»."
         )
         return RedirectResponse(
             url=f"/profile?error={quote(msg)}", status_code=303

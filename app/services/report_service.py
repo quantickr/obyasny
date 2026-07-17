@@ -69,21 +69,30 @@ async def list_reports(
 
 async def _set_status(
     session: AsyncSession, report_id: int, status: ReportStatus
-) -> None:
+) -> Report | None:
+    """Меняет статус жалобы. Возвращает Report только если статус реально
+    сменился с open (для однократного применения побочных эффектов, например
+    начисления рейтинга). Повторный вызов на уже закрытой жалобе вернёт None.
+    """
     report = await session.get(Report, report_id)
     if report is None:
-        return
+        return None
+    if report.status != ReportStatus.open:
+        return None  # уже обработана — не применяем эффекты повторно
     report.status = status
     report.resolved_at = datetime.now(timezone.utc)
     await session.flush()
+    return report
 
 
-async def resolve(session: AsyncSession, report_id: int) -> None:
-    await _set_status(session, report_id, ReportStatus.resolved)
+async def resolve(session: AsyncSession, report_id: int) -> Report | None:
+    """Признаёт жалобу обоснованной. Возвращает Report при первом разрешении
+    (для начисления рейтинга виноватому/репортёру), иначе None."""
+    return await _set_status(session, report_id, ReportStatus.resolved)
 
 
-async def dismiss(session: AsyncSession, report_id: int) -> None:
-    await _set_status(session, report_id, ReportStatus.dismissed)
+async def dismiss(session: AsyncSession, report_id: int) -> Report | None:
+    return await _set_status(session, report_id, ReportStatus.dismissed)
 
 
 async def open_count(session: AsyncSession) -> int:

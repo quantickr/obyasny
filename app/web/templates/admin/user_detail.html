@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ target.display_name }} — Админ{% endblock %}
 {% block content %}
-{% set edu_ru = {'schoolchild': 'Школьник', 'bachelor': 'Бакалавриат', 'specialist': 'Специалитет', 'master': 'Магистратура', 'postgrad': 'Аспирантура'} %}
+{% set edu_ru = {'schoolchild': 'Школьник', 'bachelor': 'Бакалавриат', 'specialist': 'Специалитет', 'master': 'Магистратура', 'postgrad': 'Аспирантура', 'graduate': 'Выпустившийся'} %}
 
 {% macro duration_fields(name) %}
 <div class="flex flex-wrap items-center gap-3 text-sm mb-2">
@@ -24,7 +24,8 @@
 <div class="max-w-3xl mx-auto space-y-6">
     <div class="flex items-center justify-between">
         <h1 class="text-xl font-bold break-words">{{ target.display_name }}
-            <span class="text-sm font-normal text-slate-400">#{{ target.id }}</span></h1>
+            <span class="text-sm font-normal text-slate-400">#{{ target.id }}</span>
+            <span class="text-sm font-semibold bg-amber-50 text-amber-700 px-2 py-0.5 rounded align-middle" title="Рейтинг">⭐ {{ target.rating }}</span></h1>
         <a href="/admin/users" class="text-sm text-slate-500 hover:text-brand-600">← К списку</a>
     </div>
 

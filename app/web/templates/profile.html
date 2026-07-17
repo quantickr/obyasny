@@ -5,7 +5,10 @@
     <div class="bg-white p-6 rounded-xl border border-slate-200">
         <div class="flex items-center justify-between mb-4">
             <h1 class="text-xl font-bold">Профиль</h1>
-            <span class="text-sm bg-amber-100 text-amber-800 px-2 py-1 rounded">🍫 {{ balance }}</span>
+            <div class="flex items-center gap-2">
+                <span class="text-sm bg-amber-50 text-amber-700 px-2 py-1 rounded font-semibold" title="Рейтинг">⭐ {{ user.rating }}</span>
+                <span class="text-sm bg-amber-100 text-amber-800 px-2 py-1 rounded">🍫 {{ balance }}</span>
+            </div>
         </div>
 
         {% if profile_locked %}
@@ -91,12 +94,12 @@
                     <select name="edu_level" id="profile-edu-level" required class="w-full border border-slate-300 rounded-md px-3 py-2">
                         {% for lvl in edu_levels %}
                         <option value="{{ lvl.value }}" {% if user.edu_level == lvl %}selected{% endif %}>
-                            {% if lvl.value == 'schoolchild' %}Школьник{% elif lvl.value == 'bachelor' %}Бакалавриат{% elif lvl.value == 'specialist' %}Специалитет{% elif lvl.value == 'master' %}Магистратура{% else %}Аспирантура{% endif %}
+                            {% if lvl.value == 'schoolchild' %}Школьник{% elif lvl.value == 'bachelor' %}Бакалавриат{% elif lvl.value == 'specialist' %}Специалитет{% elif lvl.value == 'master' %}Магистратура{% elif lvl.value == 'postgrad' %}Аспирантура{% else %}Выпустившийся{% endif %}
                         </option>
                         {% endfor %}
                     </select>
                 </div>
-                <div class="flex-1">
+                <div class="flex-1" id="profile-course-wrap">
                     <label class="block text-sm text-slate-500" id="profile-course-label">Курс</label>
                     <select name="course" id="profile-course" required class="w-full border border-slate-300 rounded-md px-3 py-2">
                         {% for c in range(1, 12) %}
@@ -182,7 +185,7 @@
             {% else %}
             <button class="text-sm bg-slate-300 text-slate-500 px-4 py-2 rounded-md cursor-not-allowed" disabled>Выложить на доску</button>
             <p class="text-xs text-amber-600 mt-2">
-                Чтобы выложиться на доску, добавьте хотя бы одну тему «могу объяснить» и одну «хочу узнать».
+                Чтобы выложиться на доску, добавьте хотя бы одну тему «могу объяснить».
             </p>
             {% endif %}
         </div>
@@ -357,15 +360,24 @@
     const courseLabel = document.getElementById('profile-course-label');
     const uniWrap = document.getElementById('profile-university-wrap');
     const course = document.getElementById('profile-course');
-    if (!level || !courseLabel || !uniWrap || !course) return;
+    const courseWrap = document.getElementById('profile-course-wrap');
+    if (!level || !courseLabel || !uniWrap || !course || !courseWrap) return;
     // Максимальный курс/класс по уровню обучения.
     const MAX_COURSE = {
         schoolchild: 11, bachelor: 5, specialist: 6, master: 3, postgrad: 4,
+        graduate: 1,
     };
     function apply() {
         const isSchool = level.value === 'schoolchild';
+        const isGraduate = level.value === 'graduate';
         courseLabel.textContent = isSchool ? 'Класс' : 'Курс';
         uniWrap.classList.toggle('hidden', isSchool);
+        // У выпустившегося курса нет — прячем поле, сервер зафиксирует 1.
+        courseWrap.classList.toggle('hidden', isGraduate);
+        if (isGraduate) {
+            course.value = '1';
+            return;
+        }
         const max = MAX_COURSE[level.value] || 11;
         // Прячем лишние варианты; если выбранный вне диапазона — сбрасываем на 1.
         for (const opt of course.options) {

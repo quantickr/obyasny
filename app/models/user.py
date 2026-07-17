@@ -29,6 +29,7 @@ class EduLevel(str, enum.Enum):
     specialist = "specialist"
     master = "master"
     postgrad = "postgrad"
+    graduate = "graduate"  # выпустившийся (без курса)
 
 
 class User(Base, TimestampMixin):
@@ -79,6 +80,11 @@ class User(Base, TimestampMixin):
     chocolate_balance: Mapped[int] = mapped_column(
         Integer, default=0, nullable=False
     )
+
+    # Рейтинг репутации: +1 за завершённое объяснение (+2 если бесплатно),
+    # −5 виноватому и +1 репортёру за доказанную жалобу. Стартует с 0,
+    # может быть отрицательным.
+    rating: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     # Когда пользователю последний раз выдавали еженедельную шоколадку.
     # Ленивая выдача (планировщика нет): начисляем при заходе на сайт.

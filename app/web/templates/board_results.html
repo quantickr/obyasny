@@ -1,4 +1,4 @@
-{% set edu_ru = {'schoolchild': 'Школьник', 'bachelor': 'Бакалавриат', 'specialist': 'Специалитет', 'master': 'Магистратура', 'postgrad': 'Аспирантура'} %}
+{% set edu_ru = {'schoolchild': 'Школьник', 'bachelor': 'Бакалавриат', 'specialist': 'Специалитет', 'master': 'Магистратура', 'postgrad': 'Аспирантура', 'graduate': 'Выпустившийся'} %}
 {% macro board_card(card, user, interacted_ids) %}
 {% set student = card.student %}
 {% set already_interacted = interacted_ids and student.id in interacted_ids %}
@@ -17,12 +17,13 @@
         </a>
         <div class="min-w-0">
             <a href="/u/{{ student.id }}" class="font-bold leading-tight break-words hover:text-brand-600 transition-colors">{{ student.display_name }}</a>
+            <span class="inline-block ml-1 text-[11px] font-semibold bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded align-middle" title="Рейтинг">⭐ {{ student.rating }}</span>
             {% if already_interacted %}
             <span class="inline-block ml-1 text-[11px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded align-middle">Вы уже взаимодействовали</span>
             {% endif %}
             {% if student.university %}
             <p class="mt-0.5">
-                <span class="inline-block text-xs font-medium bg-orange-50 text-orange-700 px-2 py-0.5 rounded break-words">{{ student.university }}{% if student.course %} · {{ student.course }} {% if student.edu_level.value == 'schoolchild' %}класс{% else %}курс{% endif %}{% endif %}{% if student.edu_level %} · {{ edu_ru[student.edu_level.value] }}{% endif %}</span>
+                <span class="inline-block text-xs font-medium bg-orange-50 text-orange-700 px-2 py-0.5 rounded break-words">{{ student.university }}{% if student.course and student.edu_level.value != 'graduate' %} · {{ student.course }} {% if student.edu_level.value == 'schoolchild' %}класс{% else %}курс{% endif %}{% endif %}{% if student.edu_level %} · {{ edu_ru[student.edu_level.value] }}{% endif %}</span>
             </p>
             {% endif %}
         </div>

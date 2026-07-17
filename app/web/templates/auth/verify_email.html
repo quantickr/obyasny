@@ -39,12 +39,50 @@
         <button class="w-full brand-gradient text-white py-2.5 rounded-lg font-bold hover:opacity-90 transition-opacity shadow-soft">Подтвердить</button>
     </form>
 
-    <form method="post" action="/verify-email/resend" class="mt-4 text-center">
-        <button class="text-sm text-brand-600 font-semibold hover:underline">Отправить код повторно</button>
+    <form method="post" action="/verify-email/resend" class="mt-4 text-center"
+          data-resend-after="{{ resend_after or 0 }}">
+        <button type="submit" data-resend-btn
+                class="text-sm text-brand-600 font-semibold hover:underline disabled:text-slate-400 disabled:no-underline disabled:cursor-not-allowed">
+            Отправить код повторно
+        </button>
+        <span data-resend-timer class="hidden text-sm text-slate-500"></span>
     </form>
 
     <p class="text-sm text-slate-500 mt-5 text-center">
         <a href="/logout" class="text-slate-400 hover:underline">Выйти</a>
     </p>
 </div>
+
+<script>
+(function () {
+    var form = document.querySelector('[data-resend-after]');
+    if (!form) return;
+    var btn = form.querySelector('[data-resend-btn]');
+    var timer = form.querySelector('[data-resend-timer]');
+    var left = parseInt(form.getAttribute('data-resend-after'), 10) || 0;
+    if (left <= 0) return;
+
+    function fmt(s) {
+        var m = Math.floor(s / 60);
+        var sec = s % 60;
+        return m + ':' + (sec < 10 ? '0' : '') + sec;
+    }
+    function tick() {
+        if (left <= 0) {
+            timer.classList.add('hidden');
+            btn.classList.remove('hidden');
+            btn.disabled = false;
+            clearInterval(iv);
+            return;
+        }
+        timer.textContent = 'Отправить снова можно через ' + fmt(left);
+        left -= 1;
+    }
+    btn.disabled = true;
+    btn.classList.add('hidden');
+    timer.classList.remove('hidden');
+    tick();
+    var iv = setInterval(tick, 1000);
+})();
+</script>
 {% endblock %}

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ profile_user.display_name }} — Объясни!{% endblock %}
 {% block content %}
-{% set edu_ru = {'schoolchild': 'Школьник', 'bachelor': 'Бакалавриат', 'specialist': 'Специалитет', 'master': 'Магистратура', 'postgrad': 'Аспирантура'} %}
+{% set edu_ru = {'schoolchild': 'Школьник', 'bachelor': 'Бакалавриат', 'specialist': 'Специалитет', 'master': 'Магистратура', 'postgrad': 'Аспирантура', 'graduate': 'Выпустившийся'} %}
 <div class="max-w-2xl mx-auto space-y-6">
     <a href="/board" class="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-brand-600 transition-colors">
         <span aria-hidden="true">←</span> Назад к доске
@@ -17,10 +17,13 @@
             </span>
             {% endif %}
             <div class="min-w-0">
-                <h1 class="text-xl font-bold break-words">{{ profile_user.display_name }}</h1>
+                <h1 class="text-xl font-bold break-words">
+                    {{ profile_user.display_name }}
+                    <span class="inline-block ml-1 text-xs font-semibold bg-amber-50 text-amber-700 px-2 py-0.5 rounded align-middle" title="Рейтинг">⭐ {{ profile_user.rating }}</span>
+                </h1>
                 {% if profile_user.university %}
                 <p class="text-sm text-slate-500 break-words">
-                    {{ profile_user.university }}{% if profile_user.course %} · {{ profile_user.course }} {% if profile_user.edu_level.value == 'schoolchild' %}класс{% else %}курс{% endif %}{% endif %}{% if profile_user.edu_level %} · {{ edu_ru[profile_user.edu_level.value] }}{% endif %}
+                    {{ profile_user.university }}{% if profile_user.course and profile_user.edu_level.value != 'graduate' %} · {{ profile_user.course }} {% if profile_user.edu_level.value == 'schoolchild' %}класс{% else %}курс{% endif %}{% endif %}{% if profile_user.edu_level %} · {{ edu_ru[profile_user.edu_level.value] }}{% endif %}
                 </p>
                 {% endif %}
                 {# Контакт в Telegram виден только внутри чата, а не в публичном профиле. #}

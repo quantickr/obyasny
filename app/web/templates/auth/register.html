@@ -30,6 +30,7 @@
             <option value="specialist">Специалитет</option>
             <option value="master">Магистратура</option>
             <option value="postgrad">Аспирантура</option>
+            <option value="graduate">Выпустившийся</option>
         </select>
         <input type="text" name="university" placeholder="Вуз (например, МГУ)" required id="reg-university"
                list="university-suggest" autocomplete="off"
@@ -107,9 +108,11 @@
     // Максимальный курс/класс по уровню обучения.
     const MAX_COURSE = {
         schoolchild: 11, bachelor: 5, specialist: 6, master: 3, postgrad: 4,
+        graduate: 1,
     };
     function apply() {
         const isSchool = level.value === 'schoolchild';
+        const isGraduate = level.value === 'graduate';
         coursePh.textContent = isSchool ? 'Класс' : 'Курс';
         if (isSchool) {
             uni.value = '';
@@ -119,6 +122,15 @@
             uni.required = true;
             uni.classList.remove('hidden');
         }
+        // У выпустившегося курса нет: прячем поле и не требуем (сервер поставит 1).
+        if (isGraduate) {
+            course.required = false;
+            course.value = '1';
+            course.classList.add('hidden');
+        } else {
+            course.required = true;
+            course.classList.remove('hidden');
+        }
         const max = MAX_COURSE[level.value] || 11;
         // Прячем варианты сверх диапазона; выбранный вне диапазона — на плейсхолдер.
         for (const opt of course.options) {
@@ -127,7 +139,7 @@
             opt.hidden = over;
             opt.disabled = over;
         }
-        if (course.value && parseInt(course.value, 10) > max) {
+        if (!isGraduate && course.value && parseInt(course.value, 10) > max) {
             course.value = '';
         }
     }
