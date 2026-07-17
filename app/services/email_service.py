@@ -55,3 +55,17 @@ async def send_verification_code(to: str, code: str) -> None:
         "— Команда «Объясни!»"
     )
     await send_email(to, subject, body)
+
+
+async def send_password_reset_code(to: str, code: str) -> None:
+    """Письмо с 6-значным кодом для сброса пароля."""
+    subject = "Код для сброса пароля — Объясни!"
+    body = (
+        "Здравствуйте!\n\n"
+        f"Код для сброса пароля: {code}\n\n"
+        "Введите его на сайте и задайте новый пароль. "
+        "Код действует 15 минут.\n\n"
+        "Если вы не запрашивали сброс пароля — просто проигнорируйте это письмо.\n\n"
+        "— Команда «Объясни!»"
+    )
+    await send_email(to, subject, body)

@@ -70,6 +70,13 @@ async def set_email_verified(session: AsyncSession, user: User) -> None:
     user.email_verified = True
 
 
+async def reset_password(
+    session: AsyncSession, user: User, new_password: str
+) -> None:
+    """Устанавливает новый пароль пользователю (после сброса по коду)."""
+    user.password_hash = hash_password(new_password)
+
+
 async def change_email(session: AsyncSession, user: User, new_email: str) -> None:
     """Меняет/добавляет email пользователю и сбрасывает подтверждение.
 

@@ -10,6 +10,11 @@
     {% if error %}
     <div class="bg-red-50 text-red-700 text-sm p-3 rounded-lg mb-3">{{ error }}</div>
     {% endif %}
+    {% if reset %}
+    <div class="bg-green-50 text-green-700 text-sm p-3 rounded-lg mb-3">
+        Пароль изменён — войдите с новым паролем.
+    </div>
+    {% endif %}
     <form method="post" action="/login" class="space-y-3">
         <input type="email" name="email" placeholder="Email" required
                class="w-full border border-brand-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent">
@@ -17,6 +22,9 @@
                class="w-full border border-brand-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent">
         <button class="w-full brand-gradient text-white py-2.5 rounded-lg font-bold hover:opacity-90 transition-opacity shadow-soft">Войти</button>
     </form>
+    <p class="text-sm text-right mt-2">
+        <a href="/forgot-password" class="text-brand-600 font-semibold hover:underline">Забыли пароль?</a>
+    </p>
     <div class="my-5 flex items-center gap-3 text-xs text-slate-400">
         <div class="flex-1 h-px bg-brand-100"></div>или<div class="flex-1 h-px bg-brand-100"></div>
     </div>

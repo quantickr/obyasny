@@ -7,8 +7,14 @@ from app.core.config import settings
 from app.core.profanity import ProfanityError
 from app.core.security import create_session_token, verify_telegram_login
 from app.models.user import EduLevel
-from app.services import email_service, email_verify_service, user_service
+from app.services import (
+    email_service,
+    email_verify_service,
+    password_reset_service,
+    user_service,
+)
 from app.services.email_verify_service import TooSoonError
+from app.services.password_reset_service import TooSoonError as ResetTooSoonError
 from app.services.user_service import AuthError
 from app.web.dependencies import (
     SESSION_COOKIE,
@@ -43,6 +49,22 @@ async def _send_code_safe(user_id: int, email: str) -> str:
         return "mailfail"
     return "sent"
 
+
+async def _send_reset_safe(email: str) -> str:
+    """Генерирует код сброса пароля и шлёт письмо. Возвращает notice.
+
+    Не бросает исключений — всегда возвращает строку-подсказку.
+    """
+    try:
+        code = await password_reset_service.issue_code(email)
+    except ResetTooSoonError:
+        return "toosoon"
+    try:
+        await email_service.send_password_reset_code(email, code)
+    except email_service.EmailError:
+        return "mailfail"
+    return "sent"
+
 router = APIRouter()
 
 _COOKIE_MAX_AGE = settings.session_ttl_hours * 3600
@@ -69,9 +91,11 @@ async def index(request: Request, user: CurrentUserOptional):
 
 
 @router.get("/login", response_class=HTMLResponse)
-async def login_page(request: Request):
+async def login_page(request: Request, reset: str = ""):
     return templates.TemplateResponse(
-        request, "auth/login.html", {"user": None, "error": None}
+        request,
+        "auth/login.html",
+        {"user": None, "error": None, "reset": reset},
     )
 
 
@@ -228,6 +252,87 @@ async def verify_email_resend(user: CurrentUserUnverified):
     notice = await _send_code_safe(user.id, user.email)
     return RedirectResponse(
         url=f"/verify-email?notice={notice}", status_code=303
+    )
+
+
+@router.get("/forgot-password", response_class=HTMLResponse)
+async def forgot_password_page(
+    request: Request, error: str = "", notice: str = ""
+):
+    return templates.TemplateResponse(
+        request,
+        "auth/forgot_password.html",
+        {"user": None, "error": error, "notice": notice},
+    )
+
+
+@router.post("/forgot-password")
+async def forgot_password_submit(
+    session: SessionDep,
+    email: str = Form(...),
+):
+    email = email.lower().strip()
+    user = await user_service.get_by_email(session, email)
+    # Шлём код только реальному аккаунту с паролем. В любом случае ведём на
+    # страницу ввода кода с нейтральным текстом (anti-enumeration).
+    if user and user.password_hash:
+        notice = await _send_reset_safe(email)
+    else:
+        notice = "sent"
+    return RedirectResponse(
+        url=f"/reset-password?email={email}&notice={notice}",
+        status_code=303,
+    )
+
+
+@router.get("/reset-password", response_class=HTMLResponse)
+async def reset_password_page(
+    request: Request, email: str = "", error: str = "", notice: str = ""
+):
+    if not email.strip():
+        return RedirectResponse(url="/forgot-password", status_code=303)
+    return templates.TemplateResponse(
+        request,
+        "auth/reset_password.html",
+        {"user": None, "email": email, "error": error, "notice": notice},
+    )
+
+
+@router.post("/reset-password")
+async def reset_password_submit(
+    session: SessionDep,
+    email: str = Form(...),
+    code: str = Form(...),
+    password: str = Form(...),
+    password_confirm: str = Form(...),
+):
+    email = email.lower().strip()
+
+    def _reject(err: str):
+        return RedirectResponse(
+            url=f"/reset-password?email={email}&error={err}", status_code=303
+        )
+
+    if password != password_confirm:
+        return _reject("nomatch")
+    if len(password) < 6:
+        return _reject("short")
+    if not await password_reset_service.verify_code(email, code):
+        return _reject("badcode")
+    user = await user_service.get_by_email(session, email)
+    if user is None or not user.password_hash:
+        return _reject("badcode")
+    await user_service.reset_password(session, user, password)
+    await session.commit()
+    return RedirectResponse(url="/login?reset=1", status_code=303)
+
+
+@router.post("/reset-password/resend")
+async def reset_password_resend(email: str = Form(...)):
+    email = email.lower().strip()
+    notice = await _send_reset_safe(email)
+    return RedirectResponse(
+        url=f"/reset-password?email={email}&notice={notice}", status_code=303
     )
 
 
