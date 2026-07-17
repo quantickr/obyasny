@@ -104,6 +104,18 @@ async def open_chat(
     await state.set_state(ChatStates.active)
     await state.update_data(chat_id=chat_id)
     await callback.answer()
+
+    # Показываем накопившиеся непрочитанные и помечаем их прочитанными.
+    partner_id = chat_service.other_participant(chat, me.id)
+    partner = await user_service.get_by_id(session, partner_id)
+    name = partner.display_name if partner else "Собеседник"
+    unread = await chat_service.unread_messages(session, chat_id, me.id)
+    if unread:
+        lines = "\n".join(f"• {m.body}" for m in unread)
+        await chat_service.mark_chat_read(session, chat_id, me.id)
+        await session.commit()
+        await callback.message.answer(f"💬 Непрочитанные от {name}:\n{lines}")
+
     await callback.message.answer(
         "💬 Вы в чате. Пишите сообщения — они дойдут собеседнику.\n"
         "Команда /stop — выйти из чата."

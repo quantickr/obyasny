@@ -114,7 +114,7 @@ async def chat_ws(websocket: WebSocket, chat_id: int):
             await websocket.close(code=1008)
             return
 
-    await manager.connect(chat_id, websocket)
+    await manager.connect(chat_id, websocket, user_id)
     try:
         while True:
             data = await websocket.receive_json()

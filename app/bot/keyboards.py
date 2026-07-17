@@ -82,7 +82,11 @@ def open_chat_button(chat_id: int) -> InlineKeyboardMarkup:
             [
                 InlineKeyboardButton(
                     text="💬 Открыть чат", callback_data=f"chat_open:{chat_id}"
-                )
+                ),
+                InlineKeyboardButton(
+                    text="📜 История",
+                    callback_data=f"chat_history:{chat_id}",
+                ),
             ]
         ]
     )

@@ -1,3 +1,5 @@
+import asyncio
+
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -82,6 +84,37 @@ async def open_inbox_chat(callback: CallbackQuery, session: AsyncSession):
         text = f"💬 Чат с {name}. Новых сообщений нет."
     await callback.answer()
     await callback.message.answer(text, reply_markup=open_chat_button(chat_id))
+
+
+@router.callback_query(F.data.startswith("chat_history:"))
+async def show_history(callback: CallbackQuery, session: AsyncSession):
+    """Показывает последние 10 сообщений чата (история переписки)."""
+    chat_id = int(callback.data.split(":")[1])
+    me = await user_service.get_by_telegram_id(session, callback.from_user.id)
+    if me is None:
+        await callback.answer("Сначала /start", show_alert=True)
+        return
+    chat = await chat_service.get_chat_for_user(session, chat_id, me.id)
+    if chat is None:
+        await callback.answer("Чат не найден", show_alert=True)
+        return
+
+    messages = await chat_service.get_messages(session, chat_id)
+    await callback.answer()
+    if not messages:
+        await callback.message.answer("💬 История пуста.")
+        return
+
+    partner_id = chat_service.other_participant(chat, me.id)
+    partner = await user_service.get_by_id(session, partner_id)
+    partner_name = partner.display_name if partner else "Собеседник"
+
+    lines = []
+    for m in messages[-10:]:
+        who = "Вы" if m.sender_id == me.id else partner_name
+        lines.append(f"{who}: {m.body}")
+    text = "📜 Последние сообщения:\n\n" + "\n".join(lines)
+    await callback.message.answer(text)
 
 
 async def _relay_to_web(
@@ -188,6 +221,10 @@ async def chat_relay_subscriber(bot) -> None:
     async for event in bus.subscribe_all():
         if event.source == "telegram":
             continue  # не эхо-им обратно то, что пришло из TG
+        # Даём web-процессу успеть пометить сообщение прочитанным, если
+        # получатель прямо сейчас смотрит открытый чат на сайте — тогда
+        # ниже unread окажется 0 и уведомление не уйдёт.
+        await asyncio.sleep(1.5)
         async with async_session_factory() as session:
             chat = await session.get(Chat, event.chat_id)
             if chat is None:
