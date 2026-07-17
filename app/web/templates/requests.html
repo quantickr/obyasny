@@ -26,7 +26,7 @@
                     <div class="absolute right-0 z-10 mt-2 w-64 bg-white border border-slate-200 rounded-lg shadow-lg p-3 space-y-3">
                         <form method="post" action="/requests/{{ req.id }}/decline">
                             <input type="hidden" name="block" value="none">
-                            <button class="w-full text-left text-sm bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-md">
+                            <button class="w-full text-left text-sm bg-red-600 text-white hover:bg-red-700 px-3 py-2 rounded-md">
                                 Отклонить эту заявку по теме «{{ req.topic.name }}»
                             </button>
                         </form>
