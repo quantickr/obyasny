@@ -135,8 +135,26 @@ async def list_board_cards_ranked(
     return [card for card, _ in cards]
 
 
+async def can_publish(session: AsyncSession, user_id: int) -> bool:
+    """Можно ли выложиться на доску: нужна ≥1 тема «могу объяснить» И ≥1
+    «хочу узнать». Доска — про взаимный обмен, поэтому обе стороны обязательны.
+    """
+    rows = await session.scalars(
+        select(UserTopic.kind).where(UserTopic.user_id == user_id)
+    )
+    kinds = set(rows)
+    return TopicKind.can_teach in kinds and TopicKind.wants_learn in kinds
+
+
 async def toggle_board(session: AsyncSession, user: User) -> bool:
-    """Переключает флаг on_board. Возвращает новое значение."""
+    """Переключает флаг on_board. Возвращает новое значение.
+
+    Выложиться на доску можно только при выполнении can_publish(); снять с
+    доски — всегда. Если условие не выполнено при попытке публикации —
+    флаг не меняется (возвращается текущее значение).
+    """
+    if not user.on_board and not await can_publish(session, user.id):
+        return user.on_board
     user.on_board = not user.on_board
     return user.on_board
 

@@ -50,6 +50,8 @@ async def profile_page(
             "tg": tg,
             "profile_locked": user_service.is_profile_locked(user),
             "profile_locked_until": user.profile_locked_until,
+            # На доску можно только с ≥1 «могу объяснить» и ≥1 «хочу узнать».
+            "can_publish_board": bool(can_teach) and bool(wants_learn),
         },
     )
 
@@ -272,6 +274,17 @@ async def toggle_board(user: CurrentUser, session: SessionDep):
 
     if (r := _locked_redirect(user)) is not None:
         return r
+    # Публикация возможна только при ≥1 «могу объяснить» и ≥1 «хочу узнать».
+    if not user.on_board and not await board_service.can_publish(
+        session, user.id
+    ):
+        msg = (
+            "Чтобы выложиться на доску, добавьте хотя бы одну тему "
+            "«могу объяснить» и одну «хочу узнать»."
+        )
+        return RedirectResponse(
+            url=f"/profile?error={quote(msg)}", status_code=303
+        )
     await board_service.toggle_board(session, user)
     await session.commit()
     return RedirectResponse(url="/profile", status_code=303)

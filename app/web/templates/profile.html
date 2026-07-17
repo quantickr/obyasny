@@ -171,13 +171,20 @@
                 Выложите себя на доску, чтобы вас нашли по вашим темам.
                 {% endif %}
             </p>
+            {% if user.on_board %}
             <form method="post" action="/profile/board/toggle">
-                {% if user.on_board %}
                 <button class="text-sm bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600">Снять с доски</button>
-                {% else %}
-                <button class="text-sm bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">Выложить на доску</button>
-                {% endif %}
             </form>
+            {% elif can_publish_board %}
+            <form method="post" action="/profile/board/toggle">
+                <button class="text-sm bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">Выложить на доску</button>
+            </form>
+            {% else %}
+            <button class="text-sm bg-slate-300 text-slate-500 px-4 py-2 rounded-md cursor-not-allowed" disabled>Выложить на доску</button>
+            <p class="text-xs text-amber-600 mt-2">
+                Чтобы выложиться на доску, добавьте хотя бы одну тему «могу объяснить» и одну «хочу узнать».
+            </p>
+            {% endif %}
         </div>
     </div>
 
