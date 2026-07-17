@@ -24,10 +24,16 @@ async def show_incoming(message: Message, session: AsyncSession):
     from app.bot.keyboards import request_actions
 
     for req in reqs:
-        await message.answer(
-            f"📥 Заявка #{req.id}: просят объяснить тему.",
-            reply_markup=request_actions(req.id),
+        sender_name = req.sender.display_name if req.sender else "Пользователь"
+        topic_name = req.topic.name if req.topic else "—"
+        text = (
+            f"📥 Заявка #{req.id}\n"
+            f"От: {sender_name}\n"
+            f"Тема: {topic_name}"
         )
+        if req.message:
+            text += f"\nОписание: {req.message}"
+        await message.answer(text, reply_markup=request_actions(req.id))
 
 
 @router.callback_query(F.data.startswith("req_accept:"))

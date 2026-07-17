@@ -63,10 +63,16 @@ async def send_request(callback: CallbackQuery, session: AsyncSession):
 
         teacher = await user_service.get_by_id(session, int(teacher_id))
         if teacher and teacher.telegram_id:
+            from app.models.topic import Topic
+
+            topic = await session.get(Topic, int(topic_id))
+            topic_name = topic.name if topic else "—"
             await notify(
                 callback.bot,
                 teacher.telegram_id,
-                f"📥 Новая заявка от {me.display_name} — просят объяснить тему.",
+                f"📥 Новая заявка #{req.id}\n"
+                f"От: {me.display_name}\n"
+                f"Тема: {topic_name}",
                 reply_markup=request_actions(req.id),
             )
     except request_service.RequestError as e:
