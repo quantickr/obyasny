@@ -107,7 +107,7 @@ async def chat_page(
             "partners": partners,
             "unread": unread,
             "last": last,
-            "request": req,
+            "req": req,
             "my_done": my_done,
             "completed": chat.completed_at is not None,
         },

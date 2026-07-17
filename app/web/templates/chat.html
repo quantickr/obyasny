@@ -63,7 +63,7 @@
                   onsubmit="return confirm('Удалить чат у себя? У собеседника он останется.');">
                 <button type="submit" class="text-xs text-red-500 hover:text-red-700">Удалить</button>
             </form>
-            {% elif request and request.status.value == 'accepted' %}
+            {% elif req and req.status.value == 'accepted' %}
             {% if my_done %}
             <span class="text-xs text-amber-600">Вы завершили, ждём собеседника…</span>
             {% else %}
