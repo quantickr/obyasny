@@ -4,138 +4,174 @@
 {% set status_ru = {'pending': 'ожидает', 'accepted': 'принята', 'declined': 'отклонена', 'cancelled': 'отменена', 'completed': 'завершена'} %}
 <h1 class="text-xl font-bold mb-4">Заявки</h1>
 
-<h2 class="font-semibold text-slate-600 mb-2">В работе</h2>
-<div class="space-y-2 mb-6">
-    {% for req in active %}
-    {% set other = req.receiver if req.sender_id == user.id else req.sender %}
-    {% set my_done = req.sender_done if req.sender_id == user.id else req.receiver_done %}
-    {% set partner_done = req.receiver_done if req.sender_id == user.id else req.sender_done %}
-    <div class="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between gap-3">
-        <p class="text-sm min-w-0">
-            <a href="/u/{{ other.id }}" class="font-semibold text-brand-600 hover:text-brand-700 break-words">{{ other.display_name }}</a>
-            · тема <b class="break-words">{{ req.topic.name }}</b>
-            {% if partner_done and not my_done %}
-            <span class="block text-xs text-amber-600 mt-1">Собеседник попросил завершить</span>
-            {% endif %}
-        </p>
-        <div class="flex items-center gap-2 shrink-0">
-            {% if req.chat_id %}
-            <a href="/chat/{{ req.chat_id }}" class="text-indigo-600 text-sm">Чат →</a>
-            {% endif %}
-            {% if my_done %}
-            <span class="text-xs text-amber-600">Вы завершили, ждём…</span>
-            {% elif partner_done %}
-            <form method="post" action="/requests/{{ req.id }}/done">
-                <button class="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-md hover:bg-emerald-700">Подтвердить завершение</button>
-            </form>
-            {% else %}
-            <form method="post" action="/requests/{{ req.id }}/done">
-                <button class="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-md hover:bg-emerald-700">Завершить</button>
-            </form>
-            {% endif %}
-        </div>
-    </div>
-    {% else %}
-    <p class="text-sm text-slate-400">Нет заявок в работе</p>
-    {% endfor %}
-</div>
-
-<h2 class="font-semibold text-slate-600 mb-2">Входящие</h2>
-<div class="space-y-2 mb-6">
-    {% for req in incoming %}
-    <div class="bg-white p-4 rounded-xl border border-slate-200">
-        <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0">
-                <p class="text-sm">
-                    <a href="/u/{{ req.sender.id }}" class="font-semibold text-brand-600 hover:text-brand-700 break-words">{{ req.sender.display_name }}</a>
-                    просит объяснить тему <b class="break-words">{{ req.topic.name }}</b>
-                </p>
-                {% if req.message %}<p class="text-sm text-slate-600 break-words whitespace-pre-wrap mt-1">{{ req.message }}</p>{% endif %}
-                <p class="text-xs text-slate-400 mt-1">Взамен: {{ 'шоколадки' if req.offer_type.value == 'chocolates' else 'взаимопомощь' }}</p>
-            </div>
+<section class="js-req-section mb-6" data-key="active">
+    <button type="button" class="js-req-toggle w-full flex items-center gap-2 mb-2 text-left">
+        <svg class="js-req-chevron w-4 h-4 text-slate-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        <h2 class="font-semibold text-slate-600">В работе</h2>
+    </button>
+    <div class="js-req-body space-y-2">
+        {% for req in active %}
+        {% set other = req.receiver if req.sender_id == user.id else req.sender %}
+        {% set my_done = req.sender_done if req.sender_id == user.id else req.receiver_done %}
+        {% set partner_done = req.receiver_done if req.sender_id == user.id else req.sender_done %}
+        <div class="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between gap-3">
+            <p class="text-sm min-w-0">
+                <a href="/u/{{ other.id }}" class="font-semibold text-brand-600 hover:text-brand-700 break-words">{{ other.display_name }}</a>
+                · тема <b class="break-words">{{ req.topic.name }}</b>
+                {% if partner_done and not my_done %}
+                <span class="block text-xs text-amber-600 mt-1">Собеседник попросил завершить</span>
+                {% endif %}
+            </p>
             <div class="flex items-center gap-2 shrink-0">
-                <form method="post" action="/requests/{{ req.id }}/accept">
-                    <button class="bg-green-600 text-white px-3 py-1.5 rounded-md text-sm hover:bg-green-700">Принять</button>
+                {% if req.chat_id %}
+                <a href="/chat/{{ req.chat_id }}" class="text-indigo-600 text-sm">Чат →</a>
+                {% endif %}
+                {% if my_done %}
+                <span class="text-xs text-amber-600">Вы завершили, ждём…</span>
+                {% elif partner_done %}
+                <form method="post" action="/requests/{{ req.id }}/done">
+                    <button class="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-md hover:bg-emerald-700">Подтвердить завершение</button>
                 </form>
-                <details class="relative">
-                    <summary class="bg-red-600 text-white px-3 py-1.5 rounded-md text-sm hover:bg-red-700 cursor-pointer select-none list-none">Отклонить</summary>
-                    <div class="absolute right-0 z-10 mt-2 w-64 bg-white border border-slate-200 rounded-lg shadow-lg p-3 space-y-3">
-                        <form method="post" action="/requests/{{ req.id }}/decline">
-                            <input type="hidden" name="block" value="none">
-                            <button class="w-full text-left text-sm bg-red-100 text-red-700 hover:bg-red-200 px-3 py-2 rounded-md">
-                                Отклонить эту заявку по теме «{{ req.topic.name }}»
-                            </button>
-                        </form>
-                        <div class="border-t border-slate-100 pt-3">
-                            <p class="text-xs text-slate-500 mb-1">Заблокировать все заявки от {{ req.sender.display_name }}:</p>
-                            <form method="post" action="/requests/{{ req.id }}/decline-all" class="flex items-center gap-1">
-                                <select name="block" class="flex-1 border border-slate-300 rounded-md px-1 py-1.5 text-xs">
-                                    <option value="forever">навсегда</option>
-                                    <option value="month">на месяц</option>
-                                    <option value="week">на неделю</option>
-                                    <option value="day">на день</option>
-                                </select>
-                                <button class="bg-red-100 text-red-700 px-3 py-1.5 rounded-md text-xs hover:bg-red-200">Заблокировать</button>
-                            </form>
-                        </div>
-                    </div>
-                </details>
+                {% else %}
+                <form method="post" action="/requests/{{ req.id }}/done">
+                    <button class="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-md hover:bg-emerald-700">Завершить</button>
+                </form>
+                {% endif %}
             </div>
         </div>
+        {% else %}
+        <p class="text-sm text-slate-400">Нет заявок в работе</p>
+        {% endfor %}
     </div>
-    {% else %}
-    <p class="text-sm text-slate-400">Нет входящих заявок</p>
-    {% endfor %}
-</div>
+</section>
 
-<h2 class="font-semibold text-slate-600 mb-2">Исходящие</h2>
-<div class="space-y-2 mb-6">
-    {% for req in outgoing %}
-    <div class="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between gap-3">
-        <p class="text-sm min-w-0">
-            <a href="/u/{{ req.receiver.id }}" class="font-semibold text-brand-600 hover:text-brand-700 break-words">{{ req.receiver.display_name }}</a>
-            · тема <b class="break-words">{{ req.topic.name }}</b>
-        </p>
-        <span class="text-xs px-2 py-1 rounded bg-slate-100 text-slate-600 shrink-0">ожидает ответа</span>
-    </div>
-    {% else %}
-    <p class="text-sm text-slate-400">Нет исходящих заявок</p>
-    {% endfor %}
-</div>
-
-<h2 class="font-semibold text-slate-600 mb-2">Завершённые</h2>
-<div class="space-y-2 mb-6">
-    {% for req in completed %}
-    {% set other = req.receiver if req.sender_id == user.id else req.sender %}
-    <div class="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between gap-3">
-        <p class="text-sm min-w-0">
-            <a href="/u/{{ other.id }}" class="font-semibold text-brand-600 hover:text-brand-700 break-words">{{ other.display_name }}</a>
-            · тема <b class="break-words">{{ req.topic.name }}</b>
-        </p>
-        <div class="flex items-center gap-2 shrink-0">
-            <span class="text-xs px-2 py-1 rounded bg-emerald-100 text-emerald-700">завершена</span>
-            {% if req.chat_id %}
-            <a href="/chat/{{ req.chat_id }}" class="text-indigo-600 text-sm">Чат →</a>
-            {% endif %}
+<section class="js-req-section mb-6" data-key="incoming">
+    <button type="button" class="js-req-toggle w-full flex items-center gap-2 mb-2 text-left">
+        <svg class="js-req-chevron w-4 h-4 text-slate-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        <h2 class="font-semibold text-slate-600">Входящие</h2>
+    </button>
+    <div class="js-req-body space-y-2">
+        {% for req in incoming %}
+        <div class="bg-white p-4 rounded-xl border border-slate-200">
+            <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <p class="text-sm">
+                        <a href="/u/{{ req.sender.id }}" class="font-semibold text-brand-600 hover:text-brand-700 break-words">{{ req.sender.display_name }}</a>
+                        просит объяснить тему <b class="break-words">{{ req.topic.name }}</b>
+                    </p>
+                    {% if req.message %}<p class="text-sm text-slate-600 break-words whitespace-pre-wrap mt-1">{{ req.message }}</p>{% endif %}
+                    <p class="text-xs text-slate-400 mt-1">Взамен: {{ 'шоколадки' if req.offer_type.value == 'chocolates' else 'взаимопомощь' }}</p>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    <form method="post" action="/requests/{{ req.id }}/accept">
+                        <button class="bg-green-600 text-white px-3 py-1.5 rounded-md text-sm hover:bg-green-700">Принять</button>
+                    </form>
+                    <details class="relative">
+                        <summary class="bg-red-600 text-white px-3 py-1.5 rounded-md text-sm hover:bg-red-700 cursor-pointer select-none list-none">Отклонить</summary>
+                        <div class="absolute right-0 z-10 mt-2 w-64 bg-white border border-slate-200 rounded-lg shadow-lg p-3 space-y-3">
+                            <form method="post" action="/requests/{{ req.id }}/decline">
+                                <input type="hidden" name="block" value="none">
+                                <button class="w-full text-left text-sm bg-red-100 text-red-700 hover:bg-red-200 px-3 py-2 rounded-md">
+                                    Отклонить эту заявку по теме «{{ req.topic.name }}»
+                                </button>
+                            </form>
+                            <div class="border-t border-slate-100 pt-3">
+                                <p class="text-xs text-slate-500 mb-1">Заблокировать все заявки от {{ req.sender.display_name }}:</p>
+                                <form method="post" action="/requests/{{ req.id }}/decline-all" class="flex items-center gap-1">
+                                    <select name="block" class="flex-1 border border-slate-300 rounded-md px-1 py-1.5 text-xs">
+                                        <option value="forever">навсегда</option>
+                                        <option value="month">на месяц</option>
+                                        <option value="week">на неделю</option>
+                                        <option value="day">на день</option>
+                                    </select>
+                                    <button class="bg-red-100 text-red-700 px-3 py-1.5 rounded-md text-xs hover:bg-red-200">Заблокировать</button>
+                                </form>
+                            </div>
+                        </div>
+                    </details>
+                </div>
+            </div>
         </div>
+        {% else %}
+        <p class="text-sm text-slate-400">Нет входящих заявок</p>
+        {% endfor %}
     </div>
-    {% else %}
-    <p class="text-sm text-slate-400">Нет завершённых заявок</p>
-    {% endfor %}
-</div>
+</section>
 
-<h2 class="font-semibold text-slate-600 mb-2">Отклонённые</h2>
-<div class="space-y-2">
-    {% for req in declined %}
-    <div class="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between gap-3">
-        <p class="text-sm min-w-0">
-            <a href="/u/{{ req.receiver.id }}" class="font-semibold text-brand-600 hover:text-brand-700 break-words">{{ req.receiver.display_name }}</a>
-            · тема <b class="break-words">{{ req.topic.name }}</b>
-        </p>
-        <span class="text-xs px-2 py-1 rounded bg-red-100 text-red-700 shrink-0">отклонена</span>
+<section class="js-req-section mb-6" data-key="outgoing">
+    <button type="button" class="js-req-toggle w-full flex items-center gap-2 mb-2 text-left">
+        <svg class="js-req-chevron w-4 h-4 text-slate-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        <h2 class="font-semibold text-slate-600">Исходящие</h2>
+    </button>
+    <div class="js-req-body space-y-2">
+        {% for req in outgoing %}
+        <div class="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between gap-3">
+            <p class="text-sm min-w-0">
+                <a href="/u/{{ req.receiver.id }}" class="font-semibold text-brand-600 hover:text-brand-700 break-words">{{ req.receiver.display_name }}</a>
+                · тема <b class="break-words">{{ req.topic.name }}</b>
+            </p>
+            <span class="text-xs px-2 py-1 rounded bg-slate-100 text-slate-600 shrink-0">ожидает ответа</span>
+        </div>
+        {% else %}
+        <p class="text-sm text-slate-400">Нет исходящих заявок</p>
+        {% endfor %}
     </div>
-    {% else %}
-    <p class="text-sm text-slate-400">Нет отклонённых заявок</p>
-    {% endfor %}
-</div>
+</section>
+
+<section class="js-req-section" data-key="completed">
+    <button type="button" class="js-req-toggle w-full flex items-center gap-2 mb-2 text-left">
+        <svg class="js-req-chevron w-4 h-4 text-slate-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        <h2 class="font-semibold text-slate-600">Завершённые</h2>
+    </button>
+    <div class="js-req-body space-y-2">
+        {% for req in completed %}
+        {% set other = req.receiver if req.sender_id == user.id else req.sender %}
+        <div class="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between gap-3">
+            <p class="text-sm min-w-0">
+                <a href="/u/{{ other.id }}" class="font-semibold text-brand-600 hover:text-brand-700 break-words">{{ other.display_name }}</a>
+                · тема <b class="break-words">{{ req.topic.name }}</b>
+            </p>
+            <div class="flex items-center gap-2 shrink-0">
+                <span class="text-xs px-2 py-1 rounded bg-emerald-100 text-emerald-700">завершена</span>
+                {% if req.chat_id %}
+                <a href="/chat/{{ req.chat_id }}" class="text-indigo-600 text-sm">Чат →</a>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <p class="text-sm text-slate-400">Нет завершённых заявок</p>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    const KEY = 'reqCollapsed';
+    let collapsed = {};
+    try { collapsed = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { collapsed = {}; }
+
+    function apply(section) {
+        const key = section.dataset.key;
+        const body = section.querySelector('.js-req-body');
+        const chevron = section.querySelector('.js-req-chevron');
+        const isCollapsed = !!collapsed[key];
+        if (body) body.classList.toggle('hidden', isCollapsed);
+        if (chevron) chevron.style.transform = isCollapsed ? 'rotate(-90deg)' : '';
+    }
+
+    document.querySelectorAll('.js-req-section').forEach(function (section) {
+        apply(section);
+        const btn = section.querySelector('.js-req-toggle');
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+            const key = section.dataset.key;
+            collapsed[key] = !collapsed[key];
+            try { localStorage.setItem(KEY, JSON.stringify(collapsed)); } catch (e) { /* ignore */ }
+            apply(section);
+        });
+    });
+})();
+</script>
 {% endblock %}

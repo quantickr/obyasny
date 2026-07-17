@@ -214,6 +214,25 @@ async def declined(session: AsyncSession, user_id: int) -> list[Request]:
     return list(await session.scalars(stmt))
 
 
+async def interacted_user_ids(session: AsyncSession, user_id: int) -> set[int]:
+    """ID пользователей, с которыми уже было принятое взаимодействие.
+
+    Взаимодействие = есть заявка в статусе accepted или completed в любую
+    сторону (я принял его заявку или он принял мою). Используется для плашки
+    на доске «Вы уже взаимодействовали».
+    """
+    stmt = select(Request.sender_id, Request.receiver_id).where(
+        or_(Request.sender_id == user_id, Request.receiver_id == user_id),
+        Request.status.in_([RequestStatus.accepted, RequestStatus.completed]),
+    )
+    result = await session.execute(stmt)
+    ids: set[int] = set()
+    for sender_id, receiver_id in result.all():
+        other = receiver_id if sender_id == user_id else sender_id
+        ids.add(other)
+    return ids
+
+
 async def incoming_count(session: AsyncSession, user_id: int) -> int:
     """Число входящих заявок, ожидающих ответа."""
     stmt = select(func.count(Request.id)).where(

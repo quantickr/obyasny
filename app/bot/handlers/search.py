@@ -70,7 +70,7 @@ async def send_request(callback: CallbackQuery, session: AsyncSession):
             await notify(
                 callback.bot,
                 teacher.telegram_id,
-                f"📥 Новая заявка #{req.id}\n"
+                f"📥 Новая заявка\n"
                 f"От: {me.display_name}\n"
                 f"Тема: {topic_name}",
                 reply_markup=request_actions(req.id),

@@ -27,7 +27,7 @@ async def show_incoming(message: Message, session: AsyncSession):
         sender_name = req.sender.display_name if req.sender else "Пользователь"
         topic_name = req.topic.name if req.topic else "—"
         text = (
-            f"📥 Заявка #{req.id}\n"
+            f"📥 Новая заявка\n"
             f"От: {sender_name}\n"
             f"Тема: {topic_name}"
         )

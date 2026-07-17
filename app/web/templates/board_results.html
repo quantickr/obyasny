@@ -1,6 +1,7 @@
 {% set edu_ru = {'schoolchild': 'Школьник', 'bachelor': 'Бакалавриат', 'specialist': 'Специалитет', 'master': 'Магистратура', 'postgrad': 'Аспирантура'} %}
-{% macro board_card(card, user) %}
+{% macro board_card(card, user, interacted_ids) %}
 {% set student = card.student %}
+{% set already_interacted = interacted_ids and student.id in interacted_ids %}
 <div class="bg-white p-5 rounded-xl border border-slate-200 mb-5 break-inside-avoid
     {% if card.match_kind == 3 %}ring-2 ring-brand-400{% endif %}">
     <div class="flex items-center gap-3 mb-3">
@@ -16,6 +17,9 @@
         </a>
         <div class="min-w-0">
             <a href="/u/{{ student.id }}" class="font-bold leading-tight break-words hover:text-brand-600 transition-colors">{{ student.display_name }}</a>
+            {% if already_interacted %}
+            <span class="inline-block ml-1 text-[11px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded align-middle">Вы уже взаимодействовали</span>
+            {% endif %}
             {% if student.university %}
             <p class="mt-0.5">
                 <span class="inline-block text-xs font-medium bg-orange-50 text-orange-700 px-2 py-0.5 rounded break-words">{{ student.university }}{% if student.course %} · {{ student.course }} {% if student.edu_level.value == 'schoolchild' %}класс{% else %}курс{% endif %}{% endif %}{% if student.edu_level %} · {{ edu_ru[student.edu_level.value] }}{% endif %}</span>
@@ -106,28 +110,28 @@
 {% if perfect %}
 <h2 class="text-lg font-bold mb-3">Идеальные пары для вас</h2>
 <div class="md:columns-2 gap-5 mb-8">
-    {% for card in perfect %}{{ board_card(card, user) }}{% endfor %}
+    {% for card in perfect %}{{ board_card(card, user, interacted_ids) }}{% endfor %}
 </div>
 {% endif %}
 
 {% if can_help_me %}
 <h2 class="text-lg font-bold mb-3">Могут вам помочь</h2>
 <div class="md:columns-2 gap-5 mb-8">
-    {% for card in can_help_me %}{{ board_card(card, user) }}{% endfor %}
+    {% for card in can_help_me %}{{ board_card(card, user, interacted_ids) }}{% endfor %}
 </div>
 {% endif %}
 
 {% if i_can_help %}
 <h2 class="text-lg font-bold mb-3">Вы можете помочь</h2>
 <div class="md:columns-2 gap-5 mb-8">
-    {% for card in i_can_help %}{{ board_card(card, user) }}{% endfor %}
+    {% for card in i_can_help %}{{ board_card(card, user, interacted_ids) }}{% endfor %}
 </div>
 {% endif %}
 
 {% if rest %}
 <h2 class="text-lg font-bold mb-3">Остальные студенты</h2>
 <div class="md:columns-2 gap-5">
-    {% for card in rest %}{{ board_card(card, user) }}{% endfor %}
+    {% for card in rest %}{{ board_card(card, user, interacted_ids) }}{% endfor %}
 </div>
 {% endif %}
 {% else %}

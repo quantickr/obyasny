@@ -6,7 +6,7 @@ from fastapi.responses import HTMLResponse
 
 from app.data.topic_synonyms import TOPIC_SYNONYMS
 from app.data.universities import UNIVERSITIES
-from app.services import board_service
+from app.services import board_service, request_service
 from app.web.dependencies import CurrentUserOptional, SessionDep
 from app.web.templating import templates
 
@@ -119,6 +119,12 @@ async def board_page(
             return any(_fuzzy_hit(v, uni) for v in variants)
 
         cards = [c for c in cards if matches(c)]
+    # Пользователи, с которыми уже было принятое взаимодействие — для плашки.
+    interacted_ids: set[int] = set()
+    if user is not None:
+        interacted_ids = await request_service.interacted_user_ids(
+            session, user.id
+        )
     # AJAX-запрос (живой поиск) — отдаём только фрагмент с карточками.
     is_ajax = request.headers.get("x-requested-with") == "fetch"
     template = "board_results.html" if is_ajax else "board.html"
@@ -132,5 +138,6 @@ async def board_page(
             "q": q,
             "universities": universities,
             "selected_universities": selected,
+            "interacted_ids": interacted_ids,
         },
     )
