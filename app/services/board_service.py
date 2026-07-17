@@ -28,6 +28,17 @@ class BoardCard:
     match_kind: int
 
 
+async def list_board_universities(session: AsyncSession) -> list[str]:
+    """Уникальные непустые вузы среди студентов на доске — для фильтра."""
+    stmt = (
+        select(User.university)
+        .where(User.on_board.is_(True), User.university != "")
+        .distinct()
+        .order_by(User.university)
+    )
+    return [u for u in await session.scalars(stmt) if u]
+
+
 async def list_board_users(
     session: AsyncSession, limit: int = 100
 ) -> list[User]:

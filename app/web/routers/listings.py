@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Query, Request
 from fastapi.responses import HTMLResponse
 
 from app.services import board_service
@@ -15,12 +15,19 @@ async def board_page(
     session: SessionDep,
     error: str = "",
     q: str = "",
+    university: list[str] = Query(default=[]),
 ):
     # Гостю — простой список без персонального метча; вошедшему — ранжирование.
     if user is None:
         cards = await board_service.list_board_cards_plain(session)
     else:
         cards = await board_service.list_board_cards_ranked(session, user.id)
+    universities = await board_service.list_board_universities(session)
+    # Мультифильтр по вузам: оставляем карточки студентов из выбранных вузов.
+    selected = [u for u in (university or []) if u.strip()]
+    if selected:
+        chosen = set(selected)
+        cards = [c for c in cards if (c.student.university or "") in chosen]
     query = q.strip().lower()
     if query:
         # Фильтр: оставляем карточки, где запрос содержится в названии темы
@@ -36,5 +43,12 @@ async def board_page(
     return templates.TemplateResponse(
         request,
         "board.html",
-        {"user": user, "cards": cards, "error": error, "q": q},
+        {
+            "user": user,
+            "cards": cards,
+            "error": error,
+            "q": q,
+            "universities": universities,
+            "selected_universities": selected,
+        },
     )

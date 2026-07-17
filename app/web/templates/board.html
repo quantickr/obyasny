@@ -7,12 +7,29 @@
     <p class="text-sm text-slate-500">Кто готов объяснять и что хочет узнать. Отправьте заявку на нужную тему.</p>
 </div>
 
-<form method="get" action="/board" class="mb-6 flex gap-2">
+<form method="get" action="/board" class="mb-6 flex flex-wrap gap-2 items-start">
     <input type="text" name="q" value="{{ q or '' }}" placeholder="Поиск по теме или вузу..."
-           class="flex-1 border border-slate-300 rounded-md px-3 py-2 text-sm">
-    <button class="bg-brand-500 text-white px-5 py-2 rounded-md hover:bg-brand-600 text-sm">Найти</button>
-    {% if q %}
-    <a href="/board" class="px-4 py-2 rounded-md border border-slate-300 text-sm text-slate-600 hover:bg-slate-50">Сбросить</a>
+           class="flex-1 min-w-[200px] border border-slate-300 rounded-md px-3 py-2 text-sm">
+    {% if universities %}
+    <details class="relative">
+        <summary class="list-none cursor-pointer select-none border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 whitespace-nowrap">
+            Вузы{% if selected_universities %} ({{ selected_universities | length }}){% else %}: все{% endif %} ▾
+        </summary>
+        <div class="absolute z-10 mt-1 w-64 max-h-72 overflow-auto bg-white border border-slate-200 rounded-md shadow-lg p-2">
+            {% for u in universities %}
+            <label class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-slate-50 cursor-pointer text-sm">
+                <input type="checkbox" name="university" value="{{ u }}"
+                       {% if u in selected_universities %}checked{% endif %}
+                       class="rounded border-slate-300 text-brand-500 focus:ring-brand-500">
+                <span class="break-words">{{ u }}</span>
+            </label>
+            {% endfor %}
+        </div>
+    </details>
+    {% endif %}
+    <button class="bg-brand-500 text-white px-5 py-2 rounded-md hover:bg-brand-600 text-sm whitespace-nowrap">Найти</button>
+    {% if q or selected_universities %}
+    <a href="/board" class="px-4 py-2 rounded-md border border-slate-300 text-sm text-slate-600 hover:bg-slate-50 whitespace-nowrap">Сбросить</a>
     {% endif %}
 </form>
 
