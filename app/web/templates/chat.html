@@ -2,11 +2,17 @@
 {% block title %}Чат — Объясни!{% endblock %}
 {% block content %}
 {% set ctx_ru = {'request': 'по заявке', 'listing': 'по объявлению', 'match': 'подбор пары', 'direct': 'личный чат'} %}
-<div class="flex gap-4 h-[70vh]">
-<!-- Левый столбик всех чатов -->
-<aside class="hidden md:flex md:flex-col w-64 shrink-0 bg-white rounded-xl border border-slate-200 overflow-hidden">
-    <div class="px-4 py-3 border-b border-slate-200">
+<div class="flex gap-4 h-[70vh] relative">
+<!-- Затемнение под выдвинутой панелью (только узкие экраны) -->
+<div id="chat-list-backdrop" class="hidden md:hidden fixed inset-0 z-30 bg-black/40"></div>
+<!-- Левый столбик всех чатов. На узких экранах — выдвижная панель слева. -->
+<aside id="chat-list"
+       class="hidden md:flex md:flex-col md:static md:z-auto md:w-64 md:shrink-0 md:translate-x-0
+              fixed inset-y-0 left-0 z-40 w-72 max-w-[85vw] flex-col
+              bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xl md:shadow-none">
+    <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
         <a href="/chats" class="text-sm font-bold text-slate-700 hover:text-brand-600">Чаты</a>
+        <button type="button" id="chat-list-close" class="md:hidden text-slate-400 hover:text-brand-600 text-lg leading-none" title="Закрыть">×</button>
     </div>
     <div class="flex-1 overflow-y-auto divide-y divide-slate-100">
         {% for c in chats %}
@@ -39,7 +45,7 @@
 <div class="flex-1 min-w-0 {% if completed %}bg-slate-100{% else %}bg-white{% endif %} rounded-xl border border-slate-200 flex flex-col">
     <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between gap-2">
         <div class="flex items-center gap-2 min-w-0">
-            <a href="/chats" class="md:hidden text-slate-400 hover:text-brand-600 shrink-0" title="К чатам">←</a>
+            <button type="button" id="chat-list-open" class="md:hidden text-slate-400 hover:text-brand-600 shrink-0 text-lg leading-none" title="Список чатов">☰</button>
             <div class="min-w-0">
                 {% if chat.title %}
                 <p class="font-semibold truncate">{{ chat.title }}</p>
@@ -107,6 +113,28 @@
 {% endblock %}
 {% block scripts %}
 <script>
+    // Выдвижная панель списка чатов на узких экранах.
+    (function () {
+        const panel = document.getElementById('chat-list');
+        const backdrop = document.getElementById('chat-list-backdrop');
+        const openBtn = document.getElementById('chat-list-open');
+        const closeBtn = document.getElementById('chat-list-close');
+        if (!panel || !backdrop) return;
+        function open() {
+            panel.classList.remove('hidden');
+            backdrop.classList.remove('hidden');
+        }
+        function close() {
+            // Прячем только на узких экранах; на ≥md панель всегда видна через md:flex.
+            if (window.matchMedia('(min-width: 768px)').matches) return;
+            panel.classList.add('hidden');
+            backdrop.classList.add('hidden');
+        }
+        if (openBtn) openBtn.addEventListener('click', open);
+        if (closeBtn) closeBtn.addEventListener('click', close);
+        backdrop.addEventListener('click', close);
+    })();
+
     const chatId = {{ chat.id }};
     const myId = {{ user.id }};
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
