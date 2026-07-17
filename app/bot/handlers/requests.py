@@ -33,6 +33,12 @@ async def show_incoming(message: Message, session: AsyncSession):
         )
         if req.message:
             text += f"\nОписание: {req.message}"
+        offer_ru = (
+            "шоколадки"
+            if req.offer_type.value == "chocolates"
+            else "взаимопомощь"
+        )
+        text += f"\nВзамен: {offer_ru}"
         await message.answer(text, reply_markup=request_actions(req.id))
 
 

@@ -72,7 +72,8 @@ async def send_request(callback: CallbackQuery, session: AsyncSession):
                 teacher.telegram_id,
                 f"📥 Новая заявка\n"
                 f"От: {me.display_name}\n"
-                f"Тема: {topic_name}",
+                f"Тема: {topic_name}\n"
+                f"Взамен: шоколадки",
                 reply_markup=request_actions(req.id),
             )
     except request_service.RequestError as e:
