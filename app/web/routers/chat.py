@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
@@ -18,6 +20,7 @@ from app.web.templating import templates
 from app.web.ws_manager import manager
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 async def _chat_sidebar(session, user, active_chat_id=None):
@@ -190,4 +193,9 @@ async def chat_ws(websocket: WebSocket, chat_id: int):
     except WebSocketDisconnect:
         manager.disconnect(chat_id, websocket)
     except Exception:
+        # Непредвиденная ошибка в цикле WS — логируем со стек-трейсом,
+        # чтобы не терять диагностику, и корректно отключаем сокет.
+        logger.exception(
+            "Ошибка в WebSocket чата chat_id=%s user_id=%s", chat_id, user_id
+        )
         manager.disconnect(chat_id, websocket)
