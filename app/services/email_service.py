@@ -36,6 +36,7 @@ async def send_email(to: str, subject: str, body: str) -> None:
             password=settings.smtp_password,
             use_tls=settings.smtp_use_ssl,
             start_tls=not settings.smtp_use_ssl,
+            timeout=15,
         )
     except Exception as e:  # noqa: BLE001 — оборачиваем в доменную ошибку
         logger.warning("Не удалось отправить письмо на %s: %s", to, e)
