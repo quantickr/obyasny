@@ -9,6 +9,12 @@ env/
 *.session
 *.session-journal
 
+# Ключи/сертификаты (DKIM и пр.) — никогда не коммитим
+*.private
+*.public
+*.pem
+*.key
+
 .pytest_cache/
 .coverage
 htmlcov/
