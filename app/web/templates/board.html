@@ -129,28 +129,28 @@
 
 {% if perfect %}
 <h2 class="text-lg font-bold mb-3">Идеальные пары для вас</h2>
-<div class="grid md:grid-cols-2 gap-5 mb-8">
+<div class="grid md:grid-cols-2 gap-5 mb-8 items-start">
     {% for card in perfect %}{{ board_card(card, user) }}{% endfor %}
 </div>
 {% endif %}
 
 {% if can_help_me %}
 <h2 class="text-lg font-bold mb-3">Могут вам помочь</h2>
-<div class="grid md:grid-cols-2 gap-5 mb-8">
+<div class="grid md:grid-cols-2 gap-5 mb-8 items-start">
     {% for card in can_help_me %}{{ board_card(card, user) }}{% endfor %}
 </div>
 {% endif %}
 
 {% if i_can_help %}
 <h2 class="text-lg font-bold mb-3">Вы можете помочь</h2>
-<div class="grid md:grid-cols-2 gap-5 mb-8">
+<div class="grid md:grid-cols-2 gap-5 mb-8 items-start">
     {% for card in i_can_help %}{{ board_card(card, user) }}{% endfor %}
 </div>
 {% endif %}
 
 {% if rest %}
 <h2 class="text-lg font-bold mb-3">Остальные студенты</h2>
-<div class="grid md:grid-cols-2 gap-5">
+<div class="grid md:grid-cols-2 gap-5 items-start">
     {% for card in rest %}{{ board_card(card, user) }}{% endfor %}
 </div>
 {% endif %}

@@ -47,6 +47,15 @@ async def api_unread(user: CurrentUserOptional, session: SessionDep):
 @router.get("/chats", response_class=HTMLResponse)
 async def chats_list(request: Request, user: CurrentUser, session: SessionDep):
     chats, partners, unread, last = await _chat_sidebar(session, user)
+    # Сразу открываем самый свежий чат: сперва чаты с сообщениями (по времени
+    # последнего), затем — без сообщений (по id). Пустой список — заглушка.
+    if chats:
+        with_msg = [c for c in chats if c.id in last]
+        if with_msg:
+            newest = max(with_msg, key=lambda c: last[c.id].created_at)
+        else:
+            newest = max(chats, key=lambda c: c.id)
+        return RedirectResponse(url=f"/chat/{newest.id}", status_code=303)
     return templates.TemplateResponse(
         request,
         "chats.html",
