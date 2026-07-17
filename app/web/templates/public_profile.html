@@ -31,7 +31,7 @@
         </div>
 
         {% if profile_user.bio %}
-        <p class="text-sm text-slate-600 mt-4 break-words whitespace-pre-wrap">{{ profile_user.bio }}</p>
+        <p class="text-sm text-slate-600 mt-4 break-words whitespace-pre-wrap">{{ profile_user.bio | censor }}</p>
         {% endif %}
     </div>
 
@@ -45,7 +45,7 @@
                     {{ ut.topic.name }}{% if ut.level %} · {{ ut.level }}/10{% endif %}
                 </span>
                 {% if ut.details %}
-                <p class="text-xs text-slate-500 mt-0.5 break-words whitespace-pre-wrap">{{ ut.details }}</p>
+                <p class="text-xs text-slate-500 mt-0.5 break-words whitespace-pre-wrap">{{ ut.details | censor }}</p>
                 {% endif %}
                 {% if not user %}
                 <a href="/register" class="inline-block mt-1 text-xs text-brand-600 hover:text-brand-700">Зарегистрируйтесь, чтобы отправить заявку</a>
@@ -85,7 +85,7 @@
                     {{ ut.topic.name }}{% if ut.level %} · {{ ut.level }}/10{% endif %}
                 </span>
                 {% if ut.details %}
-                <p class="text-xs text-slate-500 mt-0.5 break-words whitespace-pre-wrap">{{ ut.details }}</p>
+                <p class="text-xs text-slate-500 mt-0.5 break-words whitespace-pre-wrap">{{ ut.details | censor }}</p>
                 {% endif %}
             </div>
             {% endfor %}

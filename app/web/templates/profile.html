@@ -194,7 +194,7 @@
                     </div>
                 </div>
                 {% if ut.details %}
-                <p class="text-xs text-slate-500 mt-0.5 break-words whitespace-pre-wrap">{{ ut.details }}</p>
+                <p class="text-xs text-slate-500 mt-0.5 break-words whitespace-pre-wrap">{{ ut.details | censor }}</p>
                 {% endif %}
                 <details class="mt-0.5">
                     <summary class="text-xs text-brand-600 cursor-pointer select-none hover:text-brand-700">
@@ -234,7 +234,7 @@
                     </div>
                 </div>
                 {% if ut.details %}
-                <p class="text-xs text-slate-500 mt-0.5 break-words whitespace-pre-wrap">{{ ut.details }}</p>
+                <p class="text-xs text-slate-500 mt-0.5 break-words whitespace-pre-wrap">{{ ut.details | censor }}</p>
                 {% endif %}
                 <details class="mt-0.5">
                     <summary class="text-xs text-brand-600 cursor-pointer select-none hover:text-brand-700">

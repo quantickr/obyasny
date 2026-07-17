@@ -26,7 +26,7 @@
                 <span class="text-[11px] text-slate-400 shrink-0">{{ ctx_ru.get(chat.context_type.value, 'чат') if chat.context_type else 'чат' }}</span>
             </div>
             <p class="text-xs text-slate-500 truncate {% if unread_n %}font-medium text-slate-700{% endif %}">
-                {% if lastm %}{{ lastm.body }}{% else %}Нет сообщений{% endif %}
+                {% if lastm %}{{ lastm.body | censor }}{% else %}Нет сообщений{% endif %}
             </p>
         </div>
         {% if unread_n %}
