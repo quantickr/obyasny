@@ -74,7 +74,7 @@
                 {% elif student.id != user.id %}
                 <details class="mt-1">
                     <summary class="text-xs text-brand-600 cursor-pointer select-none hover:text-brand-700">Отправить заявку</summary>
-                    <form method="post" action="/search/request" class="mt-2 space-y-2">
+                    <form method="post" action="/search/request" class="mt-2 space-y-2 js-request-form">
                         <input type="hidden" name="receiver_id" value="{{ student.id }}">
                         <input type="hidden" name="topic_id" value="{{ ut.topic.id }}">
                         <input type="hidden" name="next_url" value="/board">
@@ -83,10 +83,11 @@
                         <div class="flex items-center gap-2">
                             <select name="offer_type" class="border border-slate-300 rounded-md px-2 py-1.5 text-xs">
                                 <option value="chocolates">🍫 Шоколадки</option>
-                                <option value="exchange">🔄 Обмен темой</option>
+                                <option value="exchange">🤝 Взаимопомощь</option>
                             </select>
-                            <button class="text-xs bg-brand-500 text-white px-3 py-1.5 rounded-md hover:bg-brand-600">Отправить</button>
+                            <button type="submit" class="text-xs bg-brand-500 text-white px-3 py-1.5 rounded-md hover:bg-brand-600">Отправить</button>
                         </div>
+                        <p class="js-request-status text-xs hidden"></p>
                     </form>
                 </details>
                 {% endif %}
@@ -164,4 +165,40 @@
     {% endif %}
 </div>
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('submit', async function (e) {
+        const form = e.target.closest('.js-request-form');
+        if (!form) return;
+        e.preventDefault();
+        const btn = form.querySelector('button[type="submit"]');
+        const status = form.querySelector('.js-request-status');
+        btn.disabled = true;
+        try {
+            const resp = await fetch(form.action, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'fetch' },
+                body: new FormData(form),
+            });
+            const data = await resp.json();
+            status.classList.remove('hidden', 'text-green-600', 'text-red-600');
+            if (data.ok) {
+                status.textContent = 'Отправлено ✓';
+                status.classList.add('text-green-600');
+                form.querySelector('textarea').value = '';
+            } else {
+                status.textContent = data.error || 'Не удалось отправить';
+                status.classList.add('text-red-600');
+                btn.disabled = false;
+            }
+        } catch (err) {
+            status.classList.remove('hidden');
+            status.classList.add('text-red-600');
+            status.textContent = 'Ошибка сети';
+            btn.disabled = false;
+        }
+    });
+</script>
 {% endblock %}

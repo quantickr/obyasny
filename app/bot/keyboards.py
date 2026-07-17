@@ -10,7 +10,7 @@ def main_menu() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="🔍 Найти помощь"), KeyboardButton(text="📥 Заявки")],
-            [KeyboardButton(text="🍫 Баланс")],
+            [KeyboardButton(text="💬 Чаты"), KeyboardButton(text="🍫 Баланс")],
             [KeyboardButton(text="👤 Профиль")],
         ],
         resize_keyboard=True,
@@ -86,3 +86,20 @@ def open_chat_button(chat_id: int) -> InlineKeyboardMarkup:
             ]
         ]
     )
+
+
+def chats_inbox(rows: list[tuple[int, str, str, int]]) -> InlineKeyboardMarkup:
+    """Список чатов инбокса. rows: (chat_id, имя, тема/контекст, непрочитано)."""
+    keyboard = []
+    for chat_id, name, topic, unread in rows:
+        badge = f" ({unread})" if unread else ""
+        topic_part = f" · {topic}" if topic else ""
+        keyboard.append(
+            [
+                InlineKeyboardButton(
+                    text=f"{name}{topic_part}{badge}",
+                    callback_data=f"chat_inbox:{chat_id}",
+                )
+            ]
+        )
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)

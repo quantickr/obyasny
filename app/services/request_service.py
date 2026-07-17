@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -124,6 +124,15 @@ async def outgoing(session: AsyncSession, user_id: int) -> list[Request]:
         .order_by(Request.created_at.desc())
     )
     return list(await session.scalars(stmt))
+
+
+async def incoming_count(session: AsyncSession, user_id: int) -> int:
+    """Число входящих заявок, ожидающих ответа."""
+    stmt = select(func.count(Request.id)).where(
+        Request.receiver_id == user_id,
+        Request.status == RequestStatus.pending,
+    )
+    return int(await session.scalar(stmt) or 0)
 
 
 async def accept_request(

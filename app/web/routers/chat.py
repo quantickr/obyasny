@@ -1,30 +1,62 @@
 from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from app.core.database import async_session_factory
 from app.core.security import decode_session_token
 from app.events import bus
 from app.events.schemas import ChatEvent
 from app.models.chat import MessageSource
-from app.services import chat_service, user_service
-from app.web.dependencies import SESSION_COOKIE, CurrentUser, SessionDep
+from app.services import chat_service, request_service, user_service
+from app.web.dependencies import (
+    SESSION_COOKIE,
+    CurrentUser,
+    CurrentUserOptional,
+    SessionDep,
+)
 from app.web.templating import templates
 from app.web.ws_manager import manager
 
 router = APIRouter()
 
 
-@router.get("/chats", response_class=HTMLResponse)
-async def chats_list(request: Request, user: CurrentUser, session: SessionDep):
+async def _chat_sidebar(session, user, active_chat_id=None):
+    """Собирает данные для боковой панели чатов: собеседники, непрочитанные,
+    превью последнего сообщения. Возвращает список чатов и словари."""
     chats = await chat_service.list_user_chats(session, user.id)
     partners = {}
     for c in chats:
         pid = chat_service.other_participant(c, user.id)
         partners[c.id] = await user_service.get_by_id(session, pid)
+    unread = await chat_service.unread_by_chat(session, user.id)
+    last = await chat_service.last_message_by_chat(
+        session, [c.id for c in chats]
+    )
+    return chats, partners, unread, last
+
+
+@router.get("/api/unread")
+async def api_unread(user: CurrentUserOptional, session: SessionDep):
+    """Счётчики для навигации: непрочитанные сообщения и входящие заявки."""
+    if user is None:
+        return JSONResponse({"messages": 0, "requests": 0})
+    messages = await chat_service.unread_total(session, user.id)
+    requests_n = await request_service.incoming_count(session, user.id)
+    return JSONResponse({"messages": messages, "requests": requests_n})
+
+
+@router.get("/chats", response_class=HTMLResponse)
+async def chats_list(request: Request, user: CurrentUser, session: SessionDep):
+    chats, partners, unread, last = await _chat_sidebar(session, user)
     return templates.TemplateResponse(
         request,
         "chats.html",
-        {"user": user, "chats": chats, "partners": partners},
+        {
+            "user": user,
+            "chats": chats,
+            "partners": partners,
+            "unread": unread,
+            "last": last,
+        },
     )
 
 
@@ -38,6 +70,10 @@ async def chat_page(
     partner_id = chat_service.other_participant(chat, user.id)
     partner = await user_service.get_by_id(session, partner_id)
     messages = await chat_service.get_messages(session, chat_id)
+    # Открытие чата помечает входящие сообщения прочитанными.
+    await chat_service.mark_chat_read(session, chat_id, user.id)
+    await session.commit()
+    chats, partners, unread, last = await _chat_sidebar(session, user)
     return templates.TemplateResponse(
         request,
         "chat.html",
@@ -46,6 +82,10 @@ async def chat_page(
             "chat": chat,
             "partner": partner,
             "messages": messages,
+            "chats": chats,
+            "partners": partners,
+            "unread": unread,
+            "last": last,
         },
     )
 

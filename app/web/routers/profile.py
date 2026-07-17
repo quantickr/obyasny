@@ -21,7 +21,11 @@ router = APIRouter()
 
 @router.get("/profile", response_class=HTMLResponse)
 async def profile_page(
-    request: Request, user: CurrentUser, session: SessionDep, error: str = ""
+    request: Request,
+    user: CurrentUser,
+    session: SessionDep,
+    error: str = "",
+    saved: str = "",
 ):
     user_topics = await topic_service.get_user_topics(session, user.id)
     can_teach = [ut for ut in user_topics if ut.kind == TopicKind.can_teach]
@@ -37,6 +41,7 @@ async def profile_page(
             "balance": balance,
             "edu_levels": list(EduLevel),
             "error": error,
+            "saved": saved == "1",
         },
     )
 
@@ -81,7 +86,7 @@ async def update_profile(
         return RedirectResponse(
             url=f"/profile?error={quote(str(e))}", status_code=303
         )
-    return RedirectResponse(url="/profile", status_code=303)
+    return RedirectResponse(url="/profile?saved=1", status_code=303)
 
 
 @router.post("/profile/avatar")

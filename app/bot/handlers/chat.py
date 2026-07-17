@@ -1,9 +1,10 @@
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.types import CallbackQuery, Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.bot.keyboards import chats_inbox, open_chat_button
 from app.bot.states import ChatStates
 from app.core.database import async_session_factory
 from app.events import bus
@@ -13,11 +14,74 @@ from app.services import chat_service, user_service
 
 router = Router()
 
+_CTX_RU = {
+    "request": "по заявке",
+    "listing": "по объявлению",
+    "match": "подбор пары",
+    "direct": "личный чат",
+}
+
 
 @router.message(Command("stop"), ChatStates.active)
 async def stop_chat(message: Message, state: FSMContext):
     await state.clear()
     await message.answer("Вы вышли из чата.")
+
+
+@router.message(F.text == "💬 Чаты")
+async def show_chats(message: Message, session: AsyncSession):
+    """Инбокс: список чатов с непрочитанными (имя + тема + счётчик)."""
+    me = await user_service.get_by_telegram_id(session, message.from_user.id)
+    if me is None:
+        await message.answer("Сначала /start")
+        return
+    chats = await chat_service.list_user_chats(session, me.id)
+    if not chats:
+        await message.answer("У вас пока нет чатов.")
+        return
+    unread = await chat_service.unread_by_chat(session, me.id)
+    rows = []
+    for c in chats:
+        partner_id = chat_service.other_participant(c, me.id)
+        partner = await user_service.get_by_id(session, partner_id)
+        name = partner.display_name if partner else "Собеседник"
+        topic = _CTX_RU.get(c.context_type.value, "") if c.context_type else ""
+        rows.append((c.id, name, topic, unread.get(c.id, 0)))
+    total = sum(r[3] for r in rows)
+    header = (
+        f"💬 Ваши чаты (непрочитанных: {total}):"
+        if total
+        else "💬 Ваши чаты:"
+    )
+    await message.answer(header, reply_markup=chats_inbox(rows))
+
+
+@router.callback_query(F.data.startswith("chat_inbox:"))
+async def open_inbox_chat(callback: CallbackQuery, session: AsyncSession):
+    """Показывает непрочитанные сообщения выбранного чата и помечает прочитанными."""
+    chat_id = int(callback.data.split(":")[1])
+    me = await user_service.get_by_telegram_id(session, callback.from_user.id)
+    if me is None:
+        await callback.answer("Сначала /start", show_alert=True)
+        return
+    chat = await chat_service.get_chat_for_user(session, chat_id, me.id)
+    if chat is None:
+        await callback.answer("Чат не найден", show_alert=True)
+        return
+    partner_id = chat_service.other_participant(chat, me.id)
+    partner = await user_service.get_by_id(session, partner_id)
+    name = partner.display_name if partner else "Собеседник"
+
+    unread = await chat_service.unread_messages(session, chat_id, me.id)
+    if unread:
+        lines = "\n".join(f"• {m.body}" for m in unread)
+        text = f"💬 Непрочитанные от {name}:\n{lines}"
+        await chat_service.mark_chat_read(session, chat_id, me.id)
+        await session.commit()
+    else:
+        text = f"💬 Чат с {name}. Новых сообщений нет."
+    await callback.answer()
+    await callback.message.answer(text, reply_markup=open_chat_button(chat_id))
 
 
 async def _relay_to_web(
@@ -118,8 +182,9 @@ async def relay_reply_out_of_chat(message: Message, session: AsyncSession):
 
 
 async def chat_relay_subscriber(bot) -> None:
-    """Фоновая задача бота: слушает ВСЕ чаты и доставляет в Telegram сообщения,
-    пришедшие НЕ из Telegram (source='web'), второму участнику."""
+    """Фоновая задача бота: слушает ВСЕ чаты. Текст web-сообщений сразу в Telegram
+    НЕ пересылается — получателю копятся непрочитанные, а он один раз получает
+    лёгкое уведомление о новом сообщении и открывает «💬 Чаты»."""
     async for event in bus.subscribe_all():
         if event.source == "telegram":
             continue  # не эхо-им обратно то, что пришло из TG
@@ -134,18 +199,22 @@ async def chat_relay_subscriber(bot) -> None:
             )
             recipient = await user_service.get_by_id(session, recipient_id)
             sender = await user_service.get_by_id(session, event.sender_id)
-        if recipient and recipient.telegram_id:
-            name = sender.display_name if sender else "Собеседник"
-            try:
-                sent = await bot.send_message(
-                    recipient.telegram_id, f"💬 {name}: {event.body}"
-                )
-            except Exception:
-                continue
-            # Сохраняем tg_message_id доставленного сообщения обратно в БД,
-            # чтобы reply в Telegram на это сообщение сопоставился с записью.
-            async with async_session_factory() as session:
-                await chat_service.set_tg_message_id(
-                    session, event.message_id, sent.message_id
-                )
-                await session.commit()
+            # Непрочитанные получателя в этом чате (включая только что сохранённое).
+            unread = await chat_service.unread_messages(
+                session, event.chat_id, recipient_id
+            )
+        if not (recipient and recipient.telegram_id):
+            continue
+        # Уведомляем только на ПЕРВОЕ непрочитанное, без раскрытия текста.
+        if len(unread) > 1:
+            continue
+        name = sender.display_name if sender else "Собеседник"
+        try:
+            await bot.send_message(
+                recipient.telegram_id,
+                f"💬 Новое сообщение от {name}.\n"
+                "Откройте «💬 Чаты», чтобы прочитать.",
+                reply_markup=open_chat_button(event.chat_id),
+            )
+        except Exception:
+            continue

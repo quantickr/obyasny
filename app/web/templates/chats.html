@@ -1,15 +1,40 @@
 {% extends "base.html" %}
 {% block title %}Чаты — Объясни!{% endblock %}
 {% block content %}
+{% set ctx_ru = {'request': 'по заявке', 'listing': 'по объявлению', 'match': 'подбор пары', 'direct': 'личный чат'} %}
 <h1 class="text-xl font-bold mb-4">Чаты</h1>
-<div class="space-y-2">
+<div class="bg-white rounded-xl border border-slate-200 overflow-hidden divide-y divide-slate-100">
     {% for chat in chats %}
-    <a href="/chat/{{ chat.id }}" class="block bg-white p-4 rounded-xl border border-slate-200 hover:border-indigo-300">
-        <p class="font-medium">{{ partners[chat.id].display_name if partners.get(chat.id) else 'Собеседник' }}</p>
-        <p class="text-xs text-slate-400">{{ chat.context_type.value if chat.context_type else 'чат' }}</p>
+    {% set partner = partners.get(chat.id) %}
+    {% set unread_n = unread.get(chat.id, 0) %}
+    {% set lastm = last.get(chat.id) %}
+    <a href="/chat/{{ chat.id }}"
+       class="flex items-center gap-3 p-4 hover:bg-slate-50 transition-colors">
+        {% if partner and partner.avatar_url %}
+        <img src="{{ partner.avatar_url }}" alt="Аватар"
+             class="w-11 h-11 rounded-full object-cover border border-slate-200 shrink-0">
+        {% else %}
+        <span class="w-11 h-11 rounded-full brand-gradient text-white grid place-items-center font-bold shrink-0">
+            {{ (partner.display_name[:1] | upper) if partner else '?' }}
+        </span>
+        {% endif %}
+        <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2">
+                <p class="font-semibold truncate {% if unread_n %}text-slate-900{% else %}text-slate-700{% endif %}">
+                    {{ partner.display_name if partner else 'Собеседник' }}
+                </p>
+                <span class="text-[11px] text-slate-400 shrink-0">{{ ctx_ru.get(chat.context_type.value, 'чат') if chat.context_type else 'чат' }}</span>
+            </div>
+            <p class="text-xs text-slate-500 truncate {% if unread_n %}font-medium text-slate-700{% endif %}">
+                {% if lastm %}{{ lastm.body }}{% else %}Нет сообщений{% endif %}
+            </p>
+        </div>
+        {% if unread_n %}
+        <span class="shrink-0 min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-xs grid place-items-center">{{ unread_n }}</span>
+        {% endif %}
     </a>
     {% else %}
-    <p class="text-sm text-slate-400">Пока нет чатов. Найдите кого-нибудь через поиск или подбор пар.</p>
+    <p class="p-4 text-sm text-slate-400">Пока нет чатов. Найдите кого-нибудь через поиск или подбор пар.</p>
     {% endfor %}
 </div>
 {% endblock %}

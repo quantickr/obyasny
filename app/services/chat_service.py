@@ -1,4 +1,6 @@
-from sqlalchemy import or_, select, update
+from datetime import datetime, timezone
+
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.chat import Chat, ChatContext, Message, MessageSource
@@ -108,20 +110,6 @@ async def find_message_by_tg_id_for_user(
     )
 
 
-async def set_tg_message_id(
-    session: AsyncSession, message_id: int, tg_message_id: int
-) -> None:
-    """Сохраняет id доставленного в Telegram сообщения обратно в запись БД.
-
-    Нужно, чтобы reply в Telegram на web-сообщение сопоставился с записью в БД.
-    """
-    await session.execute(
-        update(Message)
-        .where(Message.id == message_id)
-        .values(tg_message_id=tg_message_id)
-    )
-
-
 async def get_messages(
     session: AsyncSession, chat_id: int, limit: int = 100
 ) -> list[Message]:
@@ -132,3 +120,84 @@ async def get_messages(
         .limit(limit)
     )
     return list(await session.scalars(stmt))
+
+
+async def mark_chat_read(
+    session: AsyncSession, chat_id: int, user_id: int
+) -> None:
+    """Помечает входящие (не свои) непрочитанные сообщения чата прочитанными."""
+    await session.execute(
+        update(Message)
+        .where(
+            Message.chat_id == chat_id,
+            Message.sender_id != user_id,
+            Message.read_at.is_(None),
+        )
+        .values(read_at=datetime.now(timezone.utc))
+    )
+
+
+async def unread_total(session: AsyncSession, user_id: int) -> int:
+    """Число непрочитанных входящих сообщений во всех чатах пользователя."""
+    stmt = (
+        select(func.count(Message.id))
+        .join(Chat, Chat.id == Message.chat_id)
+        .where(
+            Message.sender_id != user_id,
+            Message.read_at.is_(None),
+            or_(Chat.user1_id == user_id, Chat.user2_id == user_id),
+        )
+    )
+    return int(await session.scalar(stmt) or 0)
+
+
+async def unread_messages(
+    session: AsyncSession, chat_id: int, user_id: int
+) -> list[Message]:
+    """Непрочитанные входящие (не свои) сообщения чата в хронологическом порядке."""
+    stmt = (
+        select(Message)
+        .where(
+            Message.chat_id == chat_id,
+            Message.sender_id != user_id,
+            Message.read_at.is_(None),
+        )
+        .order_by(Message.created_at.asc())
+    )
+    return list(await session.scalars(stmt))
+
+
+async def unread_by_chat(
+    session: AsyncSession, user_id: int
+) -> dict[int, int]:
+    """Число непрочитанных входящих по каждому чату пользователя."""
+    stmt = (
+        select(Message.chat_id, func.count(Message.id))
+        .join(Chat, Chat.id == Message.chat_id)
+        .where(
+            Message.sender_id != user_id,
+            Message.read_at.is_(None),
+            or_(Chat.user1_id == user_id, Chat.user2_id == user_id),
+        )
+        .group_by(Message.chat_id)
+    )
+    rows = await session.execute(stmt)
+    return {chat_id: count for chat_id, count in rows.all()}
+
+
+async def last_message_by_chat(
+    session: AsyncSession, chat_ids: list[int]
+) -> dict[int, Message]:
+    """Последнее сообщение для каждого из указанных чатов."""
+    if not chat_ids:
+        return {}
+    result: dict[int, Message] = {}
+    stmt = (
+        select(Message)
+        .where(Message.chat_id.in_(chat_ids))
+        .order_by(Message.created_at.desc())
+    )
+    for msg in await session.scalars(stmt):
+        if msg.chat_id not in result:
+            result[msg.chat_id] = msg
+    return result
