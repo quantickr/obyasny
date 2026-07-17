@@ -241,18 +241,12 @@ async def chat_relay_subscriber(bot) -> None:
             )
             recipient = await user_service.get_by_id(session, recipient_id)
             sender = await user_service.get_by_id(session, event.sender_id)
-            # Непрочитанные получателя в этом чате (включая только что сохранённое).
-            unread = await chat_service.unread_messages(
-                session, event.chat_id, recipient_id
-            )
         if not (recipient and recipient.telegram_id):
             continue
         # Получатель прямо сейчас смотрит этот чат на сайте — не беспокоим в TG.
         if await bus.is_present(event.chat_id, recipient_id):
             continue
-        # Уведомляем только на ПЕРВОЕ непрочитанное, без раскрытия текста.
-        if len(unread) > 1:
-            continue
+        # Уведомляем на КАЖДОЕ новое сообщение, без раскрытия текста.
         name = sender.display_name if sender else "Собеседник"
         try:
             await bot.send_message(
