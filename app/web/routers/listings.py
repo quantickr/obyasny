@@ -40,9 +40,12 @@ async def board_page(
             return query in uni.lower()
 
         cards = [c for c in cards if matches(c)]
+    # AJAX-запрос (живой поиск) — отдаём только фрагмент с карточками.
+    is_ajax = request.headers.get("x-requested-with") == "fetch"
+    template = "board_results.html" if is_ajax else "board.html"
     return templates.TemplateResponse(
         request,
-        "board.html",
+        template,
         {
             "user": user,
             "cards": cards,
