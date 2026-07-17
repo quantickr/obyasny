@@ -1,5 +1,3 @@
-import asyncio
-
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -221,10 +219,6 @@ async def chat_relay_subscriber(bot) -> None:
     async for event in bus.subscribe_all():
         if event.source == "telegram":
             continue  # не эхо-им обратно то, что пришло из TG
-        # Даём web-процессу успеть пометить сообщение прочитанным, если
-        # получатель прямо сейчас смотрит открытый чат на сайте — тогда
-        # ниже unread окажется 0 и уведомление не уйдёт.
-        await asyncio.sleep(1.5)
         async with async_session_factory() as session:
             chat = await session.get(Chat, event.chat_id)
             if chat is None:
@@ -241,6 +235,9 @@ async def chat_relay_subscriber(bot) -> None:
                 session, event.chat_id, recipient_id
             )
         if not (recipient and recipient.telegram_id):
+            continue
+        # Получатель прямо сейчас смотрит этот чат на сайте — не беспокоим в TG.
+        if await bus.is_present(event.chat_id, recipient_id):
             continue
         # Уведомляем только на ПЕРВОЕ непрочитанное, без раскрытия текста.
         if len(unread) > 1:

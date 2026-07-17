@@ -38,3 +38,33 @@ async def subscribe_all() -> AsyncGenerator[ChatEvent, None]:
     finally:
         await pubsub.punsubscribe("chat:*")
         await pubsub.aclose()
+
+
+# --- Presence: кто прямо сейчас смотрит открытый чат на сайте ---------------
+# Пока у пользователя открыт WebSocket конкретного чата, веб-процесс держит
+# ключ presence с коротким TTL и периодически его продлевает. Бот перед
+# отправкой уведомления в Telegram проверяет присутствие получателя: если он
+# смотрит этот чат на сайте — уведомление не отправляется.
+
+_PRESENCE_TTL = 30  # секунд; веб продлевает чаще, чем истекает
+
+
+def _presence_key(chat_id: int, user_id: int) -> str:
+    return f"presence:chat:{chat_id}:user:{user_id}"
+
+
+async def mark_present(chat_id: int, user_id: int) -> None:
+    """Отмечает, что пользователь смотрит чат (ставит/продлевает ключ с TTL)."""
+    await redis_client.set(
+        _presence_key(chat_id, user_id), "1", ex=_PRESENCE_TTL
+    )
+
+
+async def clear_present(chat_id: int, user_id: int) -> None:
+    """Снимает отметку присутствия (при закрытии WebSocket)."""
+    await redis_client.delete(_presence_key(chat_id, user_id))
+
+
+async def is_present(chat_id: int, user_id: int) -> bool:
+    """Смотрит ли пользователь этот чат на сайте прямо сейчас."""
+    return bool(await redis_client.exists(_presence_key(chat_id, user_id)))
