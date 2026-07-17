@@ -41,9 +41,15 @@ _LEET: dict[str, str] = {
 }
 
 # Многосимвольные начертания букв (проверяются ДО посимвольного _LEET).
-# «}|{» — распространённый обход буквы «ж» (например «}|{опа»).
+# Скобочные обходы: «]|[», «}|{», «)|(» → «ж» («}|{опа», «]|[опа»);
+# «)(», «}{», «][» → «х» («)(уй», «][уй»).
 _MULTIGLYPH: dict[str, str] = {
+    "]|[": "ж",
     "}|{": "ж",
+    ")|(": "ж",
+    ")(": "х",
+    "}{": "х",
+    "][": "х",
 }
 _MULTIGLYPH_MAXLEN = max(len(k) for k in _MULTIGLYPH)
 
@@ -110,6 +116,51 @@ _RU_ROOTS: list[str] = [
     r"сучар",
     r"сцук",
     r"хер[ануоыть]",
+    r"еблан",
+    r"выеб",
+    r"наеб",
+    r"объеб",
+    r"разъеб",
+    r"выродок",
+    r"шлюх",
+    r"проститутк",
+    r"хуес",
+    r"пиздюк",
+    r"уебищ",
+    r"пидорас",
+]
+
+# Корни УГРОЗ и призывов к насилию (кириллица). Ловим прямые угрозы
+# расправы/убийства/причинения вреда. Отдельно от мата, но так же
+# блокируют ввод. Формы схлопывают повторы букв при нормализации.
+_THREAT_ROOTS: list[str] = [
+    r"убью",
+    r"убе[йя]",
+    r"убива[ють]",
+    r"зарежу",
+    r"зарежь",
+    r"прирежу",
+    r"зарез",
+    r"застрел",
+    r"пристрел",
+    r"взорв",
+    r"взрыв",
+    r"изнасил",
+    r"насил",
+    r"придушу",
+    r"задушу",
+    r"удавлю",
+    r"повеш",
+    r"сдохн",
+    r"здохн",
+    r"подохн",
+    r"сожгу",
+    r"спалю тебя",
+    r"найду и убью",
+    r"расчлен",
+    r"отрежу",
+    r"выпущу кишки",
+    r"кастрир",
 ]
 
 # Английские корни (латиница).
@@ -130,7 +181,8 @@ _EN_ROOTS: list[str] = [
     r"fagot",  # faggot/fagot — «gg» схлопывается в «g» при нормализации
 ]
 
-_RU_RE = re.compile("|".join(f"(?:{p})" for p in _RU_ROOTS))
+# Угрозы объединяем с матом в RU-проекцию (та же нормализация ловит обходы).
+_RU_RE = re.compile("|".join(f"(?:{p})" for p in _RU_ROOTS + _THREAT_ROOTS))
 _EN_RE = re.compile("|".join(f"(?:{p})" for p in _EN_ROOTS))
 
 _RU_LETTER = re.compile(r"[а-яё]")
@@ -235,6 +287,127 @@ def ensure_clean(text: str | None) -> str | None:
     """Вернуть text как есть, либо поднять ProfanityError при наличии мата."""
     if contains_profanity(text):
         raise ProfanityError()
+    return text
+
+
+#: Сообщение при отклонении бессмысленного/некорректного названия темы.
+GIBBERISH_MESSAGE = (
+    "Название выглядит некорректным. Введите осмысленное название темы."
+)
+
+_VOWELS = set("аеёиоуыэюяaeiouy")
+_LETTER_RE = re.compile(r"[а-яёa-z]", re.IGNORECASE)
+
+# Ряды раскладок клавиатуры (RU ЙЦУКЕН и EN QWERTY) — набор подряд идущих
+# по ряду букв («фыва», «qwerty», «asdf») почти всегда мусор.
+_KEYBOARD_ROWS: tuple[str, ...] = (
+    "йцукенгшщзхъ",
+    "фывапролджэ",
+    "ячсмитьбю",
+    "qwertyuiop",
+    "asdfghjkl",
+    "zxcvbnm",
+)
+
+
+def _keyboard_run(word: str) -> bool:
+    """Есть ли в слове цепочка ≥4 подряд идущих по ряду клавиатуры букв."""
+    for row in _KEYBOARD_ROWS:
+        for direction in (row, row[::-1]):
+            for start in range(len(direction) - 3):
+                if direction[start : start + 4] in word:
+                    return True
+    return False
+
+
+class GibberishError(ProfanityError):
+    """Поднимается, когда название темы — бессмысленный набор букв.
+
+    Наследуется от ProfanityError, чтобы существующие обработчики
+    `except ProfanityError` в роутерах ловили и этот случай, но с
+    собственным (более подходящим) текстом сообщения.
+    """
+
+    def __init__(self, message: str = GIBBERISH_MESSAGE):
+        super().__init__(message)
+
+
+def _looks_like_gibberish(text: str) -> bool:
+    """Похоже ли название на бессмысленный набор букв.
+
+    Ловит ввод вида «орширириририоирири», «ааааааа», «фыва», «qwerty»:
+    смотрим на самое длинное слово и проверяем несколько эвристик —
+    отсутствие/избыток гласных, повтор одного слога, мало уникальных букв,
+    длинные цепочки согласных. Осмысленные названия (в т.ч. короткие
+    «ОС», «БД», «SQL», аббревиатуры) пропускаем.
+    """
+    words = [w for w in re.split(r"[^а-яёa-z]+", text.lower().replace("ё", "е")) if w]
+    if not words:
+        return False
+    # Оцениваем самое длинное «слово» — там ярче всего виден мусор.
+    word = max(words, key=len)
+    n = len(word)
+
+    # Набор подряд идущих клавиш («фыва», «qwerty») — мусор при длине ≥4.
+    if _keyboard_run(word):
+        return True
+
+    # Один символ, повторённый ≥5 раз («ааааа», «ррррр»).
+    if n >= 5 and len(set(word)) == 1:
+        return True
+
+    # Короткие токены (аббревиатуры, ОС, БД, SQL, C++) дальше не трогаем.
+    if n < 6:
+        return False
+
+    letters = [c for c in word if _LETTER_RE.fullmatch(c)]
+    if len(letters) < 6:
+        return False
+
+    vowels = sum(1 for c in letters if c in _VOWELS)
+    vowel_ratio = vowels / len(letters)
+    # Нормальные слова: гласных обычно 30–60%. Крайности — мусор.
+    if vowel_ratio < 0.15 or vowel_ratio > 0.8:
+        return True
+
+    # Слишком мало уникальных букв на длинное слово («ааааааа», «абабабаб»).
+    uniq = len(set(letters))
+    if uniq <= 3 and n >= 7:
+        return True
+    if uniq / len(letters) < 0.3:
+        return True
+
+    # Повторяющийся слог («ририририри», «орирориро»): режем на биграммы и
+    # смотрим, не доминирует ли одна пара.
+    if n >= 8:
+        bigrams = [word[i : i + 2] for i in range(len(word) - 1)]
+        if bigrams:
+            most = max(bigrams.count(b) for b in set(bigrams))
+            if most / len(bigrams) >= 0.4:
+                return True
+
+    # Длинная цепочка согласных подряд («фывапролджэ»).
+    run = 0
+    for c in letters:
+        if c in _VOWELS:
+            run = 0
+        else:
+            run += 1
+            if run >= 5:
+                return True
+
+    return False
+
+
+def ensure_adequate(text: str | None) -> str | None:
+    """Проверяет и мат, и осмысленность (для названий тем).
+
+    Сначала — фильтр мата/угроз, затем — эвристика на бессмысленный
+    набор букв. Возвращает text либо поднимает соответствующую ошибку.
+    """
+    ensure_clean(text)
+    if text and _looks_like_gibberish(text):
+        raise GibberishError()
     return text
 
 

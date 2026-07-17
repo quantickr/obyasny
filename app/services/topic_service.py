@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.profanity import ensure_clean
+from app.core.profanity import ensure_adequate
 from app.models.topic import Topic, TopicKind, UserTopic
 
 
@@ -19,7 +19,7 @@ def slugify(name: str) -> str:
 async def get_or_create_topic(
     session: AsyncSession, name: str, category: str | None = None
 ) -> Topic:
-    clean_name = ensure_clean(name.strip())
+    clean_name = ensure_adequate(name.strip())
     slug = slugify(clean_name)
     existing = await session.scalar(select(Topic).where(Topic.slug == slug))
     if existing:
