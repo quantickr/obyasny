@@ -105,16 +105,28 @@
                 <button type="submit" class="text-xs text-red-500 hover:text-red-700">Удалить</button>
             </form>
             {% elif req and req.status.value == 'accepted' %}
-            {% if my_done %}
-            <span class="text-xs text-amber-600">Вы завершили, ждём собеседника…</span>
-            {% elif partner_done %}
-            <span class="text-xs text-amber-600 mr-1">Собеседник попросил завершить</span>
-            <form method="post" action="/chat/{{ chat.id }}/done">
-                <button type="submit" class="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-md hover:bg-emerald-700">Подтвердить</button>
-            </form>
-            {% else %}
-            <form method="post" action="/chat/{{ chat.id }}/done">
+            {% if req.cancel_disputed %}
+            <span class="text-xs text-amber-600">Отмена на рассмотрении у админа</span>
+            {% elif is_sender and not req.cancel_requested %}
+            <form method="post" action="/chat/{{ chat.id }}/complete"
+                  onsubmit="return confirm('Вы уверены, что хотите завершить? Ваша шоколадка уйдёт объясняющему.');">
                 <button type="submit" class="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-md hover:bg-emerald-700">Завершить</button>
+            </form>
+            <form method="post" action="/chat/{{ chat.id }}/cancel"
+                  onsubmit="return confirm('Запросить отмену объяснения? Она уйдёт объясняющему на подтверждение.');">
+                <button type="submit" class="text-xs bg-red-100 text-red-700 px-3 py-1.5 rounded-md hover:bg-red-200">Отменить</button>
+            </form>
+            {% elif is_sender and req.cancel_requested %}
+            <span class="text-xs text-amber-600">Ждём ответа на отмену…</span>
+            {% elif not is_sender and req.cancel_requested %}
+            <span class="text-xs text-amber-600 mr-1">Просят отменить</span>
+            <form method="post" action="/chat/{{ chat.id }}/cancel-response">
+                <input type="hidden" name="accept" value="yes">
+                <button type="submit" class="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-md hover:bg-emerald-700">Принять</button>
+            </form>
+            <form method="post" action="/chat/{{ chat.id }}/cancel-response">
+                <input type="hidden" name="accept" value="no">
+                <button type="submit" class="text-xs bg-red-100 text-red-700 px-3 py-1.5 rounded-md hover:bg-red-200">Отклонить</button>
             </form>
             {% endif %}
             {% endif %}

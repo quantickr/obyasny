@@ -2,7 +2,7 @@
 {% macro board_card(card, user, interacted_ids) %}
 {% set student = card.student %}
 {% set already_interacted = interacted_ids and student.id in interacted_ids %}
-<div class="bg-white p-5 rounded-xl border border-slate-200 mb-5 break-inside-avoid
+<div class="bg-white p-5 rounded-xl border border-slate-200
     {% if card.match_kind == 3 %}ring-2 ring-brand-400{% endif %}">
     <div class="flex items-center gap-3 mb-3">
         <a href="/u/{{ student.id }}" class="shrink-0">
@@ -65,6 +65,7 @@
                             <select name="offer_type" class="border border-slate-300 rounded-md px-2 py-1.5 text-xs">
                                 <option value="chocolates">🍫 Шоколадки</option>
                                 <option value="exchange">🤝 Взаимопомощь</option>
+                                <option value="exchange">📝 Другое</option>
                             </select>
                             <button type="submit" class="text-xs bg-brand-500 text-white px-3 py-1.5 rounded-md hover:bg-brand-600">Отправить</button>
                         </div>
@@ -103,7 +104,7 @@
     {% if user and student.id != user.id %}
     <details class="relative mt-1">
         <summary class="text-[11px] text-slate-400 hover:text-red-600 cursor-pointer select-none list-none">Пожаловаться</summary>
-        <div class="absolute right-0 z-10 mt-2 w-64 bg-white border border-slate-200 rounded-lg shadow-lg p-3">
+        <div class="absolute right-0 z-10 mt-2 w-[min(16rem,90vw)] bg-white border border-slate-200 rounded-lg shadow-lg p-3">
             <form method="post" action="/report" class="space-y-2">
                 <input type="hidden" name="reported_user_id" value="{{ student.id }}">
                 <input type="hidden" name="context" value="board">
@@ -126,28 +127,28 @@
 
 {% if perfect %}
 <h2 class="text-lg font-bold mb-3">Идеальные пары для вас</h2>
-<div class="md:columns-2 gap-5 mb-8">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8 items-start">
     {% for card in perfect %}{{ board_card(card, user, interacted_ids) }}{% endfor %}
 </div>
 {% endif %}
 
 {% if can_help_me %}
 <h2 class="text-lg font-bold mb-3">Могут вам помочь</h2>
-<div class="md:columns-2 gap-5 mb-8">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8 items-start">
     {% for card in can_help_me %}{{ board_card(card, user, interacted_ids) }}{% endfor %}
 </div>
 {% endif %}
 
 {% if i_can_help %}
 <h2 class="text-lg font-bold mb-3">Вы можете помочь</h2>
-<div class="md:columns-2 gap-5 mb-8">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8 items-start">
     {% for card in i_can_help %}{{ board_card(card, user, interacted_ids) }}{% endfor %}
 </div>
 {% endif %}
 
 {% if rest %}
 <h2 class="text-lg font-bold mb-3">Остальные студенты</h2>
-<div class="md:columns-2 gap-5">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
     {% for card in rest %}{{ board_card(card, user, interacted_ids) }}{% endfor %}
 </div>
 {% endif %}

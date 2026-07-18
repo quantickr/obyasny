@@ -62,11 +62,43 @@ async def decline(
     return RedirectResponse(url="/requests", status_code=303)
 
 
-@router.post("/requests/{request_id}/done")
-async def mark_done(request_id: int, user: CurrentUser, session: SessionDep):
-    """Отметить «Завершить». Задача закрывается по обоюдному согласию сторон."""
+@router.post("/requests/{request_id}/complete")
+async def complete(request_id: int, user: CurrentUser, session: SessionDep):
+    """Завершить заявку. Доступно только отправителю (sender): заявка сразу
+    закрывается, объясняющему начисляются шоколадки и рейтинг."""
     try:
-        await request_service.toggle_done(session, request_id, user.id)
+        await request_service.complete_by_sender(session, request_id, user.id)
+        await session.commit()
+    except RequestError:
+        pass
+    return RedirectResponse(url="/requests?tab=active", status_code=303)
+
+
+@router.post("/requests/{request_id}/cancel")
+async def cancel(request_id: int, user: CurrentUser, session: SessionDep):
+    """Отправитель (sender) просит отменить объяснение → на подтверждение
+    объясняющему."""
+    try:
+        await request_service.request_cancel(session, request_id, user.id)
+        await session.commit()
+    except RequestError:
+        pass
+    return RedirectResponse(url="/requests?tab=active", status_code=303)
+
+
+@router.post("/requests/{request_id}/cancel-response")
+async def cancel_response(
+    request_id: int,
+    user: CurrentUser,
+    session: SessionDep,
+    accept: str = Form("no"),
+):
+    """Ответ объясняющего (receiver) на запрос отмены: accept=yes → отмена
+    (возврат шоколадок), accept=no → спор уходит админу."""
+    try:
+        await request_service.respond_cancel(
+            session, request_id, user.id, accept=(accept == "yes")
+        )
         await session.commit()
     except RequestError:
         pass

@@ -11,30 +11,48 @@
     </button>
     <div class="js-req-body space-y-2">
         {% for req in active %}
-        {% set other = req.receiver if req.sender_id == user.id else req.sender %}
-        {% set my_done = req.sender_done if req.sender_id == user.id else req.receiver_done %}
-        {% set partner_done = req.receiver_done if req.sender_id == user.id else req.sender_done %}
-        <div class="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between gap-3">
-            <p class="text-sm min-w-0">
-                <a href="/u/{{ other.id }}" class="font-semibold text-brand-600 hover:text-brand-700 break-words">{{ other.display_name }}</a>
-                · тема <b class="break-words">{{ req.topic.name }}</b>
-                {% if partner_done and not my_done %}
-                <span class="block text-xs text-amber-600 mt-1">Собеседник попросил завершить</span>
+        {% set is_sender = req.sender_id == user.id %}
+        {% set other = req.receiver if is_sender else req.sender %}
+        <div class="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between gap-3 flex-wrap">
+            <div class="text-sm min-w-0">
+                <p>
+                    <a href="/u/{{ other.id }}" class="font-semibold text-brand-600 hover:text-brand-700 break-words">{{ other.display_name }}</a>
+                    · тема <b class="break-words">{{ req.topic.name }}</b>
+                </p>
+                {% if req.message %}<p class="text-slate-600 break-words whitespace-pre-wrap mt-1">{{ req.message }}</p>{% endif %}
+                {% if req.cancel_disputed %}
+                <span class="block text-xs text-amber-600 mt-1">Отмена на рассмотрении у администратора</span>
+                {% elif req.cancel_requested and is_sender %}
+                <span class="block text-xs text-amber-600 mt-1">Вы запросили отмену, ждём ответа объясняющего</span>
+                {% elif req.cancel_requested and not is_sender %}
+                <span class="block text-xs text-amber-600 mt-1">Собеседник просит отменить объяснение</span>
                 {% endif %}
-            </p>
+            </div>
             <div class="flex items-center gap-2 shrink-0">
                 {% if req.chat_id %}
                 <a href="/chat/{{ req.chat_id }}" class="text-indigo-600 text-sm">Чат →</a>
                 {% endif %}
-                {% if my_done %}
-                <span class="text-xs text-amber-600">Вы завершили, ждём…</span>
-                {% elif partner_done %}
-                <form method="post" action="/requests/{{ req.id }}/done">
-                    <button class="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-md hover:bg-emerald-700">Подтвердить завершение</button>
-                </form>
-                {% else %}
-                <form method="post" action="/requests/{{ req.id }}/done">
+                {% if req.cancel_disputed %}
+                {# спор у админа — кнопок нет #}
+                {% elif is_sender and not req.cancel_requested %}
+                <form method="post" action="/requests/{{ req.id }}/complete"
+                      onsubmit="return confirm('Вы уверены, что хотите завершить? Ваша шоколадка уйдёт объясняющему.');">
                     <button class="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-md hover:bg-emerald-700">Завершить</button>
+                </form>
+                <form method="post" action="/requests/{{ req.id }}/cancel"
+                      onsubmit="return confirm('Запросить отмену объяснения? Она будет отправлена объясняющему на подтверждение.');">
+                    <button class="text-xs bg-red-100 text-red-700 px-3 py-1.5 rounded-md hover:bg-red-200">Отменить объяснение</button>
+                </form>
+                {% elif is_sender and req.cancel_requested %}
+                <span class="text-xs text-amber-600">Ждём ответа…</span>
+                {% elif not is_sender and req.cancel_requested %}
+                <form method="post" action="/requests/{{ req.id }}/cancel-response">
+                    <input type="hidden" name="accept" value="yes">
+                    <button class="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-md hover:bg-emerald-700">Принять отмену</button>
+                </form>
+                <form method="post" action="/requests/{{ req.id }}/cancel-response">
+                    <input type="hidden" name="accept" value="no">
+                    <button class="text-xs bg-red-100 text-red-700 px-3 py-1.5 rounded-md hover:bg-red-200">Отклонить</button>
                 </form>
                 {% endif %}
             </div>
@@ -105,11 +123,14 @@
     </button>
     <div class="js-req-body space-y-2">
         {% for req in outgoing %}
-        <div class="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between gap-3">
-            <p class="text-sm min-w-0">
-                <a href="/u/{{ req.receiver.id }}" class="font-semibold text-brand-600 hover:text-brand-700 break-words">{{ req.receiver.display_name }}</a>
-                · тема <b class="break-words">{{ req.topic.name }}</b>
-            </p>
+        <div class="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between gap-3 flex-wrap">
+            <div class="text-sm min-w-0">
+                <p>
+                    <a href="/u/{{ req.receiver.id }}" class="font-semibold text-brand-600 hover:text-brand-700 break-words">{{ req.receiver.display_name }}</a>
+                    · тема <b class="break-words">{{ req.topic.name }}</b>
+                </p>
+                {% if req.message %}<p class="text-slate-600 break-words whitespace-pre-wrap mt-1">{{ req.message }}</p>{% endif %}
+            </div>
             <span class="text-xs px-2 py-1 rounded bg-slate-100 text-slate-600 shrink-0">ожидает ответа</span>
         </div>
         {% else %}

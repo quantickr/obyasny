@@ -212,6 +212,14 @@ async def relay_from_telegram(
         await state.clear()
         return
 
+    # Завершённый чат доступен только для чтения — не пересылаем текст на сайт.
+    if chat.completed_at is not None:
+        await state.clear()
+        await message.answer(
+            "Задача завершена — чат доступен только для чтения."
+        )
+        return
+
     # Reply в Telegram → находим цитируемое сообщение чата по его tg_message_id.
     reply_to_id: int | None = None
     reply_preview: str | None = None
@@ -244,6 +252,16 @@ async def relay_reply_out_of_chat(message: Message, session: AsyncSession):
     )
     if original is None:
         return  # reply не на сообщение чата — не наш случай
+
+    # Завершённый чат доступен только для чтения — не пересылаем текст на сайт.
+    chat = await chat_service.get_chat_for_user(
+        session, original.chat_id, me.id
+    )
+    if chat is None or chat.completed_at is not None:
+        await message.answer(
+            "Задача завершена — чат доступен только для чтения."
+        )
+        return
 
     await _relay_to_web(
         message,

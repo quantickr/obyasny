@@ -50,14 +50,6 @@
             </div>
             <div class="flex items-center gap-2 shrink-0">
                 {% if status == 'open' %}
-                    {% if user.is_superadmin or user.can_manage_reports %}
-                    <form method="post" action="/admin/reports/{{ r.id }}/resolve">
-                        <button class="text-xs bg-emerald-600 text-white px-2 py-1 rounded hover:bg-emerald-700">Решено</button>
-                    </form>
-                    <form method="post" action="/admin/reports/{{ r.id }}/dismiss">
-                        <button class="text-xs bg-slate-200 text-slate-700 px-2 py-1 rounded hover:bg-slate-300">Отклонить</button>
-                    </form>
-                    {% endif %}
                     {% if user.is_superadmin or user.can_punish %}
                     <form method="post" action="/admin/users/{{ r.reported_user_id }}/ban"
                           onsubmit="return confirm('Забанить пользователя?');">
@@ -69,6 +61,24 @@
                 {% endif %}
             </div>
         </div>
+
+        {# Ответ админа репортёру (текстом) при разборе открытой жалобы #}
+        {% if status == 'open' and (user.is_superadmin or user.can_manage_reports) %}
+        <div class="mt-3 space-y-2">
+            <form method="post" action="/admin/reports/{{ r.id }}/resolve" class="space-y-2">
+                <textarea name="reply" rows="2" placeholder="Ответ репортёру (необязательно)"
+                          class="w-full text-sm border border-slate-200 rounded-md px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-brand-400"></textarea>
+                <div class="flex items-center gap-2">
+                    <button class="text-xs bg-emerald-600 text-white px-3 py-1 rounded hover:bg-emerald-700">Решено (обоснованно)</button>
+                    <button formaction="/admin/reports/{{ r.id }}/dismiss"
+                            class="text-xs bg-slate-200 text-slate-700 px-3 py-1 rounded hover:bg-slate-300">Отклонить</button>
+                </div>
+            </form>
+        </div>
+        {% endif %}
+        {% if r.admin_reply %}
+        <p class="mt-2 text-xs text-slate-500">Ответ админа: <span class="text-slate-700">{{ r.admin_reply }}</span></p>
+        {% endif %}
 
         {# --- Мини-панель по контексту жалобы --- #}
         <div class="mt-3 bg-slate-50 rounded-lg p-3 text-sm">
@@ -123,7 +133,7 @@
                 {# Чат: открыть переписку + быстрый мут #}
                 <div class="flex flex-wrap items-center gap-3">
                     {% if r.chat_id %}
-                    <a href="/chat/{{ r.chat_id }}" class="text-xs text-indigo-600 hover:underline">💬 Открыть чат →</a>
+                    <a href="/admin/chat/{{ r.chat_id }}" class="text-xs text-indigo-600 hover:underline">💬 Открыть чат →</a>
                     {% else %}
                     <span class="text-xs text-slate-400">Чат недоступен</span>
                     {% endif %}

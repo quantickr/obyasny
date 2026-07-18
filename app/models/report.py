@@ -61,6 +61,12 @@ class Report(Base, TimestampMixin):
         default=ReportStatus.open,
         nullable=False,
     )
+    # Текстовый ответ админа репортёру (виден в «Мои жалобы»).
+    admin_reply: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Кто из админов закрыл жалобу (SET NULL при удалении админа).
+    resolved_by: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
     resolved_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

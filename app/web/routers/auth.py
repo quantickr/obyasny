@@ -1,4 +1,5 @@
 import time
+from urllib.parse import quote
 
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -11,10 +12,12 @@ from app.services import (
     email_service,
     email_verify_service,
     password_reset_service,
+    rate_limit_service,
     user_service,
 )
 from app.services.email_verify_service import TooSoonError
 from app.services.password_reset_service import TooSoonError as ResetTooSoonError
+from app.services.rate_limit_service import RateLimitError
 from app.services.user_service import AuthError
 from app.web.dependencies import (
     SESSION_COOKIE,
@@ -69,6 +72,33 @@ router = APIRouter()
 
 _COOKIE_MAX_AGE = settings.session_ttl_hours * 3600
 
+# Email для сброса пароля храним во временной cookie, а не в query string,
+# чтобы он не попадал в логи nginx, историю браузера и заголовок Referer.
+_PWRESET_EMAIL_COOKIE = "pwreset_email"
+_PWRESET_EMAIL_MAX_AGE = 900  # 15 минут — как TTL кода сброса
+
+
+def _reset_redirect(
+    email: str, *, notice: str = "", error: str = ""
+) -> RedirectResponse:
+    """Редирект на /reset-password с email в HttpOnly-cookie (не в URL)."""
+    params = []
+    if notice:
+        params.append(f"notice={quote(notice)}")
+    if error:
+        params.append(f"error={quote(error)}")
+    query = ("?" + "&".join(params)) if params else ""
+    response = RedirectResponse(url=f"/reset-password{query}", status_code=303)
+    response.set_cookie(
+        _PWRESET_EMAIL_COOKIE,
+        email,
+        max_age=_PWRESET_EMAIL_MAX_AGE,
+        httponly=True,
+        samesite="lax",
+        secure=settings.is_prod,
+    )
+    return response
+
 
 def _set_session(response: RedirectResponse, user_id: int) -> None:
     token = create_session_token(user_id)
@@ -78,6 +108,8 @@ def _set_session(response: RedirectResponse, user_id: int) -> None:
         max_age=_COOKIE_MAX_AGE,
         httponly=True,
         samesite="lax",
+        # В проде (HTTPS) cookie не должна уходить по HTTP.
+        secure=settings.is_prod,
     )
 
 
@@ -106,12 +138,22 @@ async def login_submit(
     email: str = Form(...),
     password: str = Form(...),
 ):
+    ip = rate_limit_service.client_ip(request)
+    # Брутфорс-защита: не более 10 попыток входа с одного IP за 5 минут.
+    try:
+        await rate_limit_service.hit("login", ip, limit=10, window_seconds=300)
+    except RateLimitError as e:
+        return templates.TemplateResponse(
+            request, "auth/login.html", {"user": None, "error": str(e)}
+        )
     try:
         user = await user_service.authenticate_email(session, email, password)
     except AuthError as e:
         return templates.TemplateResponse(
             request, "auth/login.html", {"user": None, "error": str(e)}
         )
+    # Успешный вход сбрасывает счётчик попыток.
+    await rate_limit_service.reset("login", ip)
     response = RedirectResponse(url="/profile", status_code=303)
     _set_session(response, user.id)
     return response
@@ -141,8 +183,19 @@ async def register_submit(
             request, "auth/register.html", {"user": None, "error": msg}
         )
 
+    ip = rate_limit_service.client_ip(request)
+    # Анти-спам: не более 5 регистраций с одного IP за час.
+    try:
+        await rate_limit_service.hit(
+            "register", ip, limit=5, window_seconds=3600
+        )
+    except RateLimitError as e:
+        return _reject(str(e))
+
     if password != password_confirm:
         return _reject("Пароли не совпадают")
+    if len(password) < 6:
+        return _reject("Пароль должен быть не короче 6 символов")
     try:
         level = EduLevel(edu_level)
     except ValueError:
@@ -272,10 +325,20 @@ async def forgot_password_page(
 
 @router.post("/forgot-password")
 async def forgot_password_submit(
+    request: Request,
     session: SessionDep,
     email: str = Form(...),
 ):
     email = email.lower().strip()
+    ip = rate_limit_service.client_ip(request)
+    # Анти-спам на рассылку писем: не более 5 запросов с IP за 15 минут.
+    try:
+        await rate_limit_service.hit(
+            "forgot", ip, limit=5, window_seconds=900
+        )
+    except RateLimitError:
+        # Ведём на страницу ввода кода с нейтральным notice (не раскрываем лимит).
+        return _reset_redirect(email, notice="sent")
     user = await user_service.get_by_email(session, email)
     # Шлём код только реальному аккаунту с паролем. В любом случае ведём на
     # страницу ввода кода с нейтральным текстом (anti-enumeration).
@@ -283,17 +346,16 @@ async def forgot_password_submit(
         notice = await _send_reset_safe(email)
     else:
         notice = "sent"
-    return RedirectResponse(
-        url=f"/reset-password?email={email}&notice={notice}",
-        status_code=303,
-    )
+    return _reset_redirect(email, notice=notice)
 
 
 @router.get("/reset-password", response_class=HTMLResponse)
 async def reset_password_page(
-    request: Request, email: str = "", error: str = "", notice: str = ""
+    request: Request, error: str = "", notice: str = ""
 ):
-    if not email.strip():
+    # Email берём из временной cookie, а не из URL.
+    email = (request.cookies.get(_PWRESET_EMAIL_COOKIE) or "").strip()
+    if not email:
         return RedirectResponse(url="/forgot-password", status_code=303)
     return templates.TemplateResponse(
         request,
@@ -313,9 +375,7 @@ async def reset_password_submit(
     email = email.lower().strip()
 
     def _reject(err: str):
-        return RedirectResponse(
-            url=f"/reset-password?email={email}&error={err}", status_code=303
-        )
+        return _reset_redirect(email, error=err)
 
     if password != password_confirm:
         return _reject("nomatch")
@@ -328,19 +388,19 @@ async def reset_password_submit(
         return _reject("badcode")
     await user_service.reset_password(session, user, password)
     await session.commit()
-    return RedirectResponse(url="/login?reset=1", status_code=303)
+    response = RedirectResponse(url="/login?reset=1", status_code=303)
+    response.delete_cookie(_PWRESET_EMAIL_COOKIE)  # email больше не нужен
+    return response
 
 
 @router.post("/reset-password/resend")
 async def reset_password_resend(email: str = Form(...)):
     email = email.lower().strip()
     notice = await _send_reset_safe(email)
-    return RedirectResponse(
-        url=f"/reset-password?email={email}&notice={notice}", status_code=303
-    )
+    return _reset_redirect(email, notice=notice)
 
 
-@router.get("/logout")
+@router.post("/logout")
 async def logout():
     response = RedirectResponse(url="/login", status_code=303)
     response.delete_cookie(SESSION_COOKIE)

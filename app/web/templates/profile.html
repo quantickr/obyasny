@@ -312,6 +312,24 @@
     </div>
 </div>
 
+<div class="mt-6 bg-white p-6 rounded-xl border border-slate-200">
+    <h2 class="font-bold mb-1">Жалобы</h2>
+    <p class="text-sm text-slate-500 mb-3">Статус и ответы администратора по вашим жалобам.</p>
+    <a href="/my-reports" class="text-sm text-brand-600 hover:underline">Мои жалобы →</a>
+</div>
+
+<div class="mt-6 bg-white p-6 rounded-xl border border-red-200">
+    <h2 class="font-bold text-red-700 mb-1">Удаление аккаунта</h2>
+    <p class="text-sm text-slate-500 mb-3">
+        Аккаунт, профиль, темы, чаты и заявки будут удалены безвозвратно.
+        Это действие нельзя отменить.
+    </p>
+    <form method="post" action="/profile/delete"
+          onsubmit="return confirm('Удалить аккаунт навсегда? Все ваши данные будут стёрты. Это действие необратимо.');">
+        <button class="text-sm bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">Удалить мой аккаунт</button>
+    </form>
+</div>
+
 {% if suggest_link_tg %}
 <div id="tg-link-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
     <div class="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-sm w-full p-6 text-center">
@@ -506,6 +524,10 @@
             if (!blob) { confirmBtn.disabled = false; return; }
             const fd = new FormData();
             fd.append('file', blob, 'avatar.png');
+            // Body собирается вручную (не из <form>), поэтому CSRF-токен из
+            // cookie добавляем сами — иначе middleware отклонит запрос.
+            const m = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
+            if (m) fd.append('csrf_token', decodeURIComponent(m[1]));
             try {
                 const resp = await fetch('/profile/avatar', { method: 'POST', body: fd });
                 if (resp.redirected) { window.location.href = resp.url; return; }

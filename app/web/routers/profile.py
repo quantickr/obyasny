@@ -17,7 +17,12 @@ from app.services import (
 )
 from app.services.email_verify_service import TooSoonError
 from app.services.user_service import AuthError
-from app.web.dependencies import CurrentUser, CurrentUserOptional, SessionDep
+from app.web.dependencies import (
+    SESSION_COOKIE,
+    CurrentUser,
+    CurrentUserOptional,
+    SessionDep,
+)
 from app.web.templating import templates
 
 router = APIRouter()
@@ -343,3 +348,14 @@ async def unlink_telegram(user: CurrentUser, session: SessionDep):
     user.telegram_username = None
     await session.commit()
     return RedirectResponse(url="/profile?tg=unlinked", status_code=303)
+
+
+@router.post("/profile/delete")
+async def delete_account(user: CurrentUser, session: SessionDep):
+    """Пользователь удаляет свой аккаунт: связанные данные уходят каскадом,
+    сессия сбрасывается, редирект на главную."""
+    await user_service.delete_user(session, user.id)
+    await session.commit()
+    response = RedirectResponse(url="/", status_code=303)
+    response.delete_cookie(SESSION_COOKIE)
+    return response

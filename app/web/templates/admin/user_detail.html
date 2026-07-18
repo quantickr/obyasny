@@ -245,5 +245,20 @@
         </p>
     </div>
     {% endif %}
+
+    {# Удаление аккаунта — только суперадмину, не себя и не другого суперадмина #}
+    {% if user.is_superadmin and target.id != user.id and not target.is_superadmin %}
+    <div class="bg-white p-5 rounded-xl border border-red-200">
+        <h2 class="font-semibold text-red-700 mb-1">Удаление аккаунта</h2>
+        <p class="text-sm text-slate-500 mb-3">
+            Полное удаление пользователя со всеми данными (профиль, темы, чаты,
+            заявки). Необратимо.
+        </p>
+        <form method="post" action="/admin/users/{{ target.id }}/delete"
+              onsubmit="return confirm('Удалить аккаунт {{ target.display_name }} навсегда? Все данные будут стёрты.');">
+            <button class="text-sm bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">Удалить аккаунт</button>
+        </form>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

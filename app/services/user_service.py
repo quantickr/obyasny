@@ -66,6 +66,21 @@ async def set_banned(
     return user
 
 
+async def delete_user(session: AsyncSession, user_id: int) -> bool:
+    """Удаляет аккаунт вместе со связанными данными (FK каскадом).
+
+    Все FK на users.id — ondelete=CASCADE, кроме ChocolateTransaction.
+    from_user_id (SET NULL), поэтому удаление безопасно. Возвращает True,
+    если пользователь существовал и был удалён.
+    """
+    user = await session.get(User, user_id)
+    if user is None:
+        return False
+    await session.delete(user)
+    await session.flush()
+    return True
+
+
 # --- Срочные наказания (бан / мут / блокировка правки профиля) ---
 
 

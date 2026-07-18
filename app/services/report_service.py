@@ -68,11 +68,17 @@ async def list_reports(
 
 
 async def _set_status(
-    session: AsyncSession, report_id: int, status: ReportStatus
+    session: AsyncSession,
+    report_id: int,
+    status: ReportStatus,
+    reply: str | None = None,
+    admin_id: int | None = None,
 ) -> Report | None:
     """Меняет статус жалобы. Возвращает Report только если статус реально
     сменился с open (для однократного применения побочных эффектов, например
     начисления рейтинга). Повторный вызов на уже закрытой жалобе вернёт None.
+
+    reply — текстовый ответ админа репортёру, admin_id — кто закрыл жалобу.
     """
     report = await session.get(Report, report_id)
     if report is None:
@@ -81,18 +87,47 @@ async def _set_status(
         return None  # уже обработана — не применяем эффекты повторно
     report.status = status
     report.resolved_at = datetime.now(timezone.utc)
+    report.admin_reply = (reply or "").strip() or None
+    report.resolved_by = admin_id
     await session.flush()
     return report
 
 
-async def resolve(session: AsyncSession, report_id: int) -> Report | None:
+async def resolve(
+    session: AsyncSession,
+    report_id: int,
+    reply: str | None = None,
+    admin_id: int | None = None,
+) -> Report | None:
     """Признаёт жалобу обоснованной. Возвращает Report при первом разрешении
     (для начисления рейтинга виноватому/репортёру), иначе None."""
-    return await _set_status(session, report_id, ReportStatus.resolved)
+    return await _set_status(
+        session, report_id, ReportStatus.resolved, reply, admin_id
+    )
 
 
-async def dismiss(session: AsyncSession, report_id: int) -> Report | None:
-    return await _set_status(session, report_id, ReportStatus.dismissed)
+async def dismiss(
+    session: AsyncSession,
+    report_id: int,
+    reply: str | None = None,
+    admin_id: int | None = None,
+) -> Report | None:
+    return await _set_status(
+        session, report_id, ReportStatus.dismissed, reply, admin_id
+    )
+
+
+async def list_reports_by_reporter(
+    session: AsyncSession, reporter_id: int
+) -> list[Report]:
+    """Жалобы, отправленные пользователем (для страницы «Мои жалобы»)."""
+    stmt = (
+        select(Report)
+        .where(Report.reporter_id == reporter_id)
+        .options(selectinload(Report.reported))
+        .order_by(Report.created_at.desc())
+    )
+    return list(await session.scalars(stmt))
 
 
 async def open_count(session: AsyncSession) -> int:

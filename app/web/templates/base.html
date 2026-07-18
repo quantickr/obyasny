@@ -61,7 +61,7 @@
 </head>
 <body class="bg-brand-50/60 text-slate-800 min-h-screen flex flex-col antialiased">
     <header class="sticky top-0 z-30 bg-white/80 backdrop-blur border-b border-brand-100">
-        <nav class="max-w-5xl mx-auto px-4 py-3 flex items-center gap-5 text-sm font-semibold">
+        <nav class="max-w-5xl mx-auto px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm font-semibold">
             <a href="/" class="flex items-center gap-2 text-lg font-extrabold select-none hover:opacity-80 transition-opacity">
                 <span class="text-2xl">🎓</span>
                 <span class="brand-text-gradient">Объясни!</span>
@@ -91,7 +91,9 @@
                     {% endif %}
                     <span class="hidden sm:inline">{{ user.display_name }}</span>
                 </a>
-                <a href="/logout" class="text-slate-400 hover:text-red-500 transition-colors">Выйти</a>
+                <form method="post" action="/logout" class="inline flex">
+                    <button type="submit" class="text-slate-400 hover:text-red-500 transition-colors">Выйти</button>
+                </form>
             </div>
             {% else %}
             <a href="/board" class="text-slate-600 hover:text-brand-600 transition-colors">Доска</a>

@@ -20,9 +20,13 @@ class Settings(BaseSettings):
     bot_token: str = ""
     bot_username: str = "YourBot"
 
+    # Окружение: "dev" (локально по HTTP) или "prod". Влияет на выдачу Swagger,
+    # флаг Secure у cookie и строгость проверки секретов.
+    environment: str = "dev"
+
     # Веб-приложение
     webapp_base_url: str = "http://localhost:8000"
-    jwt_secret: str = "change_me_super_secret_key"
+    jwt_secret: str = ""
     session_ttl_hours: int = 168
 
     domain: str = "example.com"
@@ -39,10 +43,27 @@ class Settings(BaseSettings):
     smtp_from: str = ""  # адрес отправителя; если пусто — используется smtp_user
     smtp_use_ssl: bool = True  # True → SSL(465); False → STARTTLS(587)
 
+    @property
+    def is_prod(self) -> bool:
+        return self.environment.strip().lower() in ("prod", "production")
+
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    settings = Settings()
+    # В проде запрещаем стартовать с пустым/дефолтным секретом подписи сессий:
+    # иначе злоумышленник сможет подделать JWT и войти под любым пользователем.
+    if settings.is_prod:
+        weak = {"", "change_me_super_secret_key"}
+        if settings.jwt_secret.strip() in weak or len(settings.jwt_secret) < 32:
+            raise RuntimeError(
+                "jwt_secret не задан или слишком короткий для прода. "
+                "Задайте случайный JWT_SECRET (минимум 32 символа) в .env."
+            )
+    elif not settings.jwt_secret.strip():
+        # Dev-фолбэк: фиксированный секрет, чтобы локально не падать по HTTP.
+        settings.jwt_secret = "dev-insecure-secret-change-me-in-prod-0000"
+    return settings
 
 
 settings = get_settings()

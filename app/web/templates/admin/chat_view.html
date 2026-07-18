@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Просмотр чата — админ{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="flex items-center justify-between gap-3 mb-4 flex-wrap">
+        <div class="min-w-0">
+            <h1 class="text-xl font-bold">Просмотр чата #{{ chat.id }}</h1>
+            <p class="text-sm text-slate-500 break-words">
+                {% if chat.title %}<b>{{ chat.title }}</b> · {% endif %}
+                {% if u1 %}<a href="/admin/users/{{ u1.id }}" class="text-indigo-600 hover:underline">{{ u1.display_name }}</a>{% else %}?{% endif %}
+                ↔
+                {% if u2 %}<a href="/admin/users/{{ u2.id }}" class="text-indigo-600 hover:underline">{{ u2.display_name }}</a>{% else %}?{% endif %}
+            </p>
+            {% if chat.completed_at %}
+            <span class="text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-700">✓ завершён</span>
+            {% endif %}
+        </div>
+        <a href="/admin/reports" class="text-sm text-slate-500 hover:text-brand-600 shrink-0">← Назад</a>
+    </div>
+
+    <div class="bg-white rounded-xl border border-slate-200 p-4 space-y-2">
+        {% for m in messages %}
+        {% set mine = m.sender_id == chat.user2_id %}
+        <div class="flex {% if mine %}justify-end{% endif %}">
+            <div class="max-w-[75%]">
+                <p class="text-[11px] text-slate-400 mb-0.5 {% if mine %}text-right{% endif %}">
+                    {% if m.sender_id == chat.user1_id %}{{ u1.display_name if u1 else '?' }}{% else %}{{ u2.display_name if u2 else '?' }}{% endif %}
+                    · {{ m.created_at.strftime('%d.%m %H:%M') }}
+                </p>
+                <div class="{% if mine %}bg-indigo-600 text-white{% else %}bg-slate-100{% endif %} px-3 py-2 rounded-lg text-sm break-words">
+                    {% if m.reply_to %}
+                    <div class="mb-1 pl-2 border-l-2 {% if mine %}border-indigo-300 text-indigo-100{% else %}border-slate-400 text-slate-500{% endif %} text-xs italic break-words">
+                        {{ m.reply_to.body[:120] | censor }}{% if m.reply_to.body|length > 120 %}…{% endif %}
+                    </div>
+                    {% endif %}
+                    <span class="whitespace-pre-wrap">{{- m.body | censor -}}</span>{% if m.source.value == 'telegram' %}<span class="text-[10px] opacity-60 ml-1">TG</span>{% endif %}
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <p class="text-sm text-slate-400 text-center py-6">В чате пока нет сообщений</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

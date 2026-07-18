@@ -9,6 +9,7 @@ from app.core.config import settings
 from app.core.database import async_session_factory
 from app.core.logging import setup_logging
 from app.services import user_service
+from app.web.csrf import CSRFMiddleware
 from app.web.dependencies import (
     RequireAdminAccess,
     RequireBanned,
@@ -68,7 +69,18 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Объясни!", lifespan=lifespan)
+app = FastAPI(
+    title="Объясни!",
+    lifespan=lifespan,
+    # В проде скрываем Swagger/ReDoc/OpenAPI: они раскрывают всю карту API.
+    docs_url=None if settings.is_prod else "/docs",
+    redoc_url=None if settings.is_prod else "/redoc",
+    openapi_url=None if settings.is_prod else "/openapi.json",
+)
+
+# CSRF-защита форм (double-submit cookie). Регистрируем как middleware-класс,
+# чтобы он оборачивал HTML-ответы и добавлял скрытое поле в формы.
+app.add_middleware(CSRFMiddleware)
 
 
 @app.middleware("http")

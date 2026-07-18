@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Form, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from app.core.database import async_session_factory
@@ -100,19 +100,14 @@ async def chat_page(
     await chat_service.mark_chat_read(session, chat_id, user.id)
     await session.commit()
 
-    # Связанная заявка (если чат создан из заявки) — для кнопки «Завершить».
+    # Связанная заявка (если чат создан из заявки) — для управления
+    # завершением/отменой. is_sender определяет доступный набор кнопок.
     req = None
-    my_done = False
-    partner_done = False
+    is_sender = False
     if chat.context_id is not None:
         req = await request_service.get_request(session, chat.context_id)
         if req is not None:
-            my_done = (
-                req.sender_done if user.id == req.sender_id else req.receiver_done
-            )
-            partner_done = (
-                req.receiver_done if user.id == req.sender_id else req.sender_done
-            )
+            is_sender = user.id == req.sender_id
 
     blocked = await chat_service.is_blocked(session, user.id, partner_id)
 
@@ -130,22 +125,58 @@ async def chat_page(
             "unread": unread,
             "last": last,
             "req": req,
-            "my_done": my_done,
-            "partner_done": partner_done,
+            "is_sender": is_sender,
             "completed": chat.completed_at is not None,
             "blocked": blocked,
         },
     )
 
 
-@router.post("/chat/{chat_id}/done")
-async def chat_done(chat_id: int, user: CurrentUser, session: SessionDep):
-    """Кнопка «Завершить» в окне чата → завершение по обоюдному согласию."""
+@router.post("/chat/{chat_id}/complete")
+async def chat_complete(chat_id: int, user: CurrentUser, session: SessionDep):
+    """Кнопка «Завершить» в окне чата → завершение отправителем (sender)."""
     chat = await chat_service.get_chat_for_user(session, chat_id, user.id)
     if chat is None or chat.context_id is None:
         return RedirectResponse(url=f"/chat/{chat_id}", status_code=303)
     try:
-        await request_service.toggle_done(session, chat.context_id, user.id)
+        await request_service.complete_by_sender(
+            session, chat.context_id, user.id
+        )
+        await session.commit()
+    except RequestError:
+        pass
+    return RedirectResponse(url=f"/chat/{chat_id}", status_code=303)
+
+
+@router.post("/chat/{chat_id}/cancel")
+async def chat_cancel(chat_id: int, user: CurrentUser, session: SessionDep):
+    """Кнопка «Отменить объяснение» в чате → запрос отмены отправителем."""
+    chat = await chat_service.get_chat_for_user(session, chat_id, user.id)
+    if chat is None or chat.context_id is None:
+        return RedirectResponse(url=f"/chat/{chat_id}", status_code=303)
+    try:
+        await request_service.request_cancel(session, chat.context_id, user.id)
+        await session.commit()
+    except RequestError:
+        pass
+    return RedirectResponse(url=f"/chat/{chat_id}", status_code=303)
+
+
+@router.post("/chat/{chat_id}/cancel-response")
+async def chat_cancel_response(
+    chat_id: int,
+    user: CurrentUser,
+    session: SessionDep,
+    accept: str = Form("no"),
+):
+    """Ответ объясняющего (receiver) на запрос отмены в окне чата."""
+    chat = await chat_service.get_chat_for_user(session, chat_id, user.id)
+    if chat is None or chat.context_id is None:
+        return RedirectResponse(url=f"/chat/{chat_id}", status_code=303)
+    try:
+        await request_service.respond_cancel(
+            session, chat.context_id, user.id, accept=(accept == "yes")
+        )
         await session.commit()
     except RequestError:
         pass

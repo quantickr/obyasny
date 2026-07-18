@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.profanity import ProfanityError, ensure_clean
+from app.models.chat import Message, MessageSource
 from app.models.chocolate import ChocolateReason
 from app.models.request import OfferType, Request, RequestStatus
 from app.models.topic import Topic, TopicKind, UserTopic
@@ -276,7 +277,8 @@ async def accept_request(
     """Принять заявку: только получатель. Создаёт отдельный чат под заявку.
 
     Заголовок чата = «Тема + Имя отправителя». Награда объясняющему НЕ
-    начисляется здесь — только при обоюдном завершении задачи (toggle_done).
+    начисляется здесь — только при завершении заявки отправителем
+    (complete_by_sender) или решении админа в пользу объясняющего.
     """
     req = await session.get(Request, request_id)
     if not req or req.receiver_id != user_id:
@@ -297,6 +299,18 @@ async def accept_request(
         title=title,
         context_id=req.id,
     )
+    # Первым сообщением чата отображаем текст заявки от отправителя. Текст уже
+    # прошёл ensure_clean при создании заявки, поэтому вставляем Message напрямую
+    # (минуя save_message, который мог бы бросить MutedError).
+    if req.message:
+        session.add(
+            Message(
+                chat_id=chat.id,
+                sender_id=req.sender_id,
+                body=req.message,
+                source=MessageSource.web,
+            )
+        )
     req.status = RequestStatus.accepted
     req.chat_id = chat.id
     req.responded_at = datetime.now(timezone.utc)
@@ -368,54 +382,150 @@ async def decline_all_from(
     await session.flush()
 
 
-async def toggle_done(
+async def _award_completion(session: AsyncSession, req: Request) -> None:
+    """Завершает заявку в пользу объясняющего: статус completed, чат read-only,
+    рейтинг и шоколадки объясняющему (receiver).
+
+    Рейтинг: +1 за платное, +2 за бесплатное (price == 0). Шоколадки — только
+    для оплаты шоколадками в размере зафиксированной цены; при цене 0 награды нет.
+    """
+    req.status = RequestStatus.completed
+    req.completed_at = datetime.now(timezone.utc)
+    req.cancel_requested = False
+    req.cancel_disputed = False
+    if req.chat_id is not None:
+        await chat_service.complete_chat(session, req.chat_id)
+    receiver = await session.get(User, req.receiver_id)
+    if receiver is not None:
+        receiver.rating += 2 if req.price == 0 else 1
+    if req.offer_type == OfferType.chocolates and req.price > 0:
+        await chocolate_service.award(
+            session,
+            to_user_id=req.receiver_id,
+            amount=req.price,
+            reason=ChocolateReason.explanation,
+            from_user_id=req.sender_id,
+            ref_type="request",
+            ref_id=req.id,
+        )
+
+
+async def complete_by_sender(
     session: AsyncSession, request_id: int, user_id: int
 ) -> Request:
-    """Отметка «Завершить» одной из сторон. Завершение — по обоюдному согласию.
+    """Завершение заявки отправителем (sender). Только отправитель может завершить.
 
-    Только участник заявки (sender/receiver) может отметить. Когда оба отметили
-    → status=completed, чат становится завершённым, объясняющему (receiver)
-    начисляются шоколадки по цене заявки (те, что списались у отправителя при
-    создании). При цене 0 — бесплатно, начисления нет.
+    Заявка сразу → completed, объясняющему начисляются шоколадки и рейтинг.
+    Недоступно, если по заявке идёт процесс отмены (cancel_requested/disputed).
     """
     req = await session.get(Request, request_id)
     if not req:
         raise RequestError("Заявка не найдена")
-    if user_id not in (req.sender_id, req.receiver_id):
-        raise RequestError("Нет доступа к заявке")
-    if req.status not in (RequestStatus.accepted,):
+    if user_id != req.sender_id:
+        raise RequestError("Завершить может только отправитель заявки")
+    if req.status != RequestStatus.accepted:
         raise RequestError("Заявку нельзя завершить")
-
-    if user_id == req.sender_id:
-        req.sender_done = True
-    else:
-        req.receiver_done = True
-
-    if req.sender_done and req.receiver_done:
-        req.status = RequestStatus.completed
-        req.completed_at = datetime.now(timezone.utc)
-        if req.chat_id is not None:
-            await chat_service.complete_chat(session, req.chat_id)
-        # Рейтинг объясняющему (receiver) за завершённое объяснение: +1, а за
-        # бесплатное (price == 0) → +2 (поощряем бесплатную помощь). Не зависит
-        # от способа оплаты (обмен темами тоже даёт +1, т.к. price по умолчанию 1).
-        receiver = await session.get(User, req.receiver_id)
-        if receiver is not None:
-            receiver.rating += 2 if req.price == 0 else 1
-        # Награда объясняющему (receiver) — только для оплаты шоколадками, в
-        # размере зафиксированной цены заявки. При цене 0 (бесплатно) награды нет.
-        if req.offer_type == OfferType.chocolates and req.price > 0:
-            await chocolate_service.award(
-                session,
-                to_user_id=req.receiver_id,
-                amount=req.price,
-                reason=ChocolateReason.explanation,
-                from_user_id=req.sender_id,
-                ref_type="request",
-                ref_id=req.id,
-            )
+    if req.cancel_requested or req.cancel_disputed:
+        raise RequestError("По заявке идёт процесс отмены")
+    await _award_completion(session, req)
     await session.flush()
     return req
+
+
+async def request_cancel(
+    session: AsyncSession, request_id: int, user_id: int
+) -> Request:
+    """Отправитель (sender) запрашивает отмену объяснения.
+
+    Ставит cancel_requested=True → ждём решения объясняющего (receiver).
+    """
+    req = await session.get(Request, request_id)
+    if not req:
+        raise RequestError("Заявка не найдена")
+    if user_id != req.sender_id:
+        raise RequestError("Отменить может только отправитель заявки")
+    if req.status != RequestStatus.accepted:
+        raise RequestError("Заявку нельзя отменить")
+    if req.cancel_requested or req.cancel_disputed:
+        raise RequestError("Отмена уже запрошена")
+    req.cancel_requested = True
+    await session.flush()
+    return req
+
+
+async def respond_cancel(
+    session: AsyncSession, request_id: int, user_id: int, accept: bool
+) -> Request:
+    """Ответ объясняющего (receiver) на запрос отмены.
+
+    accept=True → заявка cancelled, шоколадки возвращаются отправителю.
+    accept=False → cancel_disputed=True, спор уходит админу на разбор.
+    """
+    req = await session.get(Request, request_id)
+    if not req:
+        raise RequestError("Заявка не найдена")
+    if user_id != req.receiver_id:
+        raise RequestError("Ответить на отмену может только объясняющий")
+    if req.status != RequestStatus.accepted or not req.cancel_requested:
+        raise RequestError("Нет запроса на отмену")
+    if req.cancel_disputed:
+        raise RequestError("Спор уже на рассмотрении админа")
+    if accept:
+        req.status = RequestStatus.cancelled
+        req.cancel_requested = False
+        req.responded_at = datetime.now(timezone.utc)
+        if req.chat_id is not None:
+            await chat_service.complete_chat(session, req.chat_id)
+        await _refund_if_chocolates(session, req)
+    else:
+        req.cancel_disputed = True
+    await session.flush()
+    return req
+
+
+async def admin_resolve_dispute(
+    session: AsyncSession, request_id: int, cancel: bool
+) -> Request:
+    """Разбор спора об отмене админом.
+
+    cancel=True → заявка cancelled, шоколадки возвращаются отправителю.
+    cancel=False → заявка completed в пользу объясняющего (шоколадки + рейтинг).
+    """
+    req = await session.get(Request, request_id)
+    if not req:
+        raise RequestError("Заявка не найдена")
+    if not req.cancel_disputed:
+        raise RequestError("По заявке нет спора на рассмотрении")
+    if cancel:
+        req.status = RequestStatus.cancelled
+        req.cancel_requested = False
+        req.cancel_disputed = False
+        req.responded_at = datetime.now(timezone.utc)
+        if req.chat_id is not None:
+            await chat_service.complete_chat(session, req.chat_id)
+        await _refund_if_chocolates(session, req)
+    else:
+        await _award_completion(session, req)
+    await session.flush()
+    return req
+
+
+async def list_disputed(session: AsyncSession) -> list[Request]:
+    """Заявки со спором об отмене, ожидающие разбора админом."""
+    result = await session.scalars(
+        select(Request)
+        .where(
+            Request.status == RequestStatus.accepted,
+            Request.cancel_disputed.is_(True),
+        )
+        .options(
+            selectinload(Request.sender),
+            selectinload(Request.receiver),
+            selectinload(Request.topic),
+        )
+        .order_by(Request.responded_at.asc())
+    )
+    return list(result)
 
 
 def _blocked_until(block: str) -> datetime | None:

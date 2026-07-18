@@ -7,7 +7,14 @@ from app.core.profanity import ProfanityError
 from app.models.report import ReportContext, ReportStatus
 from app.models.topic import TopicKind
 from app.models.user import EduLevel, User
-from app.services import report_service, topic_service, user_service
+from app.services import (
+    chat_service,
+    report_service,
+    request_service,
+    topic_service,
+    user_service,
+)
+from app.services.request_service import RequestError
 from app.web.dependencies import (
     CurrentAdmin,
     CurrentSuperadmin,
@@ -62,6 +69,7 @@ async def dashboard(request: Request, admin: CurrentAdmin, session: SessionDep):
     users_total = await user_service.count_users(session)
     open_reports = await report_service.open_count(session)
     recent = await report_service.list_reports(session, ReportStatus.open)
+    open_disputes = len(await request_service.list_disputed(session))
     return templates.TemplateResponse(
         request,
         "admin/dashboard.html",
@@ -69,6 +77,7 @@ async def dashboard(request: Request, admin: CurrentAdmin, session: SessionDep):
             "user": admin,
             "users_total": users_total,
             "open_reports": open_reports,
+            "open_disputes": open_disputes,
             "recent": recent[:10],
         },
     )
@@ -134,13 +143,18 @@ async def reports_page(
 
 @router.post("/reports/{report_id}/resolve")
 async def resolve_report(
-    report_id: int, admin: CurrentAdmin, session: SessionDep
+    report_id: int,
+    admin: CurrentAdmin,
+    session: SessionDep,
+    reply: str = Form(""),
 ):
     _require(admin, "can_manage_reports")
     # Доказанная жалоба меняет рейтинг: виноватому −5, репортёру +1.
     # resolve() возвращает Report только при первом разрешении (open→resolved),
     # поэтому повторное «Разрешить» рейтинг не начислит дважды.
-    report = await report_service.resolve(session, report_id)
+    report = await report_service.resolve(
+        session, report_id, reply=reply, admin_id=admin.id
+    )
     if report is not None:
         guilty = await session.get(User, report.reported_user_id)
         reporter = await session.get(User, report.reporter_id)
@@ -154,12 +168,42 @@ async def resolve_report(
 
 @router.post("/reports/{report_id}/dismiss")
 async def dismiss_report(
-    report_id: int, admin: CurrentAdmin, session: SessionDep
+    report_id: int,
+    admin: CurrentAdmin,
+    session: SessionDep,
+    reply: str = Form(""),
 ):
     _require(admin, "can_manage_reports")
-    await report_service.dismiss(session, report_id)
+    await report_service.dismiss(
+        session, report_id, reply=reply, admin_id=admin.id
+    )
     await session.commit()
     return RedirectResponse(url="/admin/reports", status_code=303)
+
+
+@router.get("/chat/{chat_id}", response_class=HTMLResponse)
+async def admin_chat_view(
+    request: Request, chat_id: int, admin: CurrentAdmin, session: SessionDep
+):
+    """Read-only просмотр любого чата админом (для разбора жалоб/споров)."""
+    _require(admin, "can_manage_reports")
+    chat = await chat_service.get_chat(session, chat_id)
+    if chat is None:
+        raise HTTPException(status_code=404, detail="Чат не найден")
+    u1 = await user_service.get_by_id(session, chat.user1_id)
+    u2 = await user_service.get_by_id(session, chat.user2_id)
+    messages = await chat_service.get_messages(session, chat_id)
+    return templates.TemplateResponse(
+        request,
+        "admin/chat_view.html",
+        {
+            "user": admin,
+            "chat": chat,
+            "u1": u1,
+            "u2": u2,
+            "messages": messages,
+        },
+    )
 
 
 @router.get("/users", response_class=HTMLResponse)
@@ -239,6 +283,26 @@ async def edit_user_profile(
     except ProfanityError:
         pass  # админ вводит данные сам — просто игнорируем нецензурное
     return RedirectResponse(url=f"/admin/users/{user_id}", status_code=303)
+
+
+@router.post("/users/{user_id}/delete")
+async def delete_user_admin(
+    user_id: int, admin: CurrentSuperadmin, session: SessionDep
+):
+    """Удаление чужого аккаунта (только суперадмин).
+
+    Нельзя удалить себя и других суперадминов.
+    """
+    if user_id == admin.id:
+        return RedirectResponse(
+            url=f"/admin/users/{user_id}", status_code=303
+        )
+    target = await user_service.get_by_id(session, user_id)
+    if target is None or target.is_superadmin:
+        return RedirectResponse(url="/admin/users", status_code=303)
+    await user_service.delete_user(session, user_id)
+    await session.commit()
+    return RedirectResponse(url="/admin/users", status_code=303)
 
 
 @router.post("/users/{user_id}/board/off")
@@ -424,3 +488,40 @@ async def set_user_rights(
     )
     await session.commit()
     return RedirectResponse(url="/admin/admins", status_code=303)
+
+
+# --- Споры об отмене объяснения (задача 8) ---
+
+
+@router.get("/disputes", response_class=HTMLResponse)
+async def disputes_page(
+    request: Request, admin: CurrentAdmin, session: SessionDep
+):
+    """Заявки, где объясняющий отклонил отмену — спор на разбор админом."""
+    _require(admin, "can_manage_reports")
+    disputes = await request_service.list_disputed(session)
+    return templates.TemplateResponse(
+        request,
+        "admin/disputes.html",
+        {"user": admin, "disputes": disputes},
+    )
+
+
+@router.post("/disputes/{request_id}/resolve")
+async def resolve_dispute(
+    request_id: int,
+    admin: CurrentAdmin,
+    session: SessionDep,
+    action: str = Form("cancel"),
+):
+    """Разбор спора: action=cancel → отмена (возврат отправителю),
+    action=complete → завершить в пользу объясняющего."""
+    _require(admin, "can_manage_reports")
+    try:
+        await request_service.admin_resolve_dispute(
+            session, request_id, cancel=(action == "cancel")
+        )
+        await session.commit()
+    except RequestError:
+        pass
+    return RedirectResponse(url="/admin/disputes", status_code=303)

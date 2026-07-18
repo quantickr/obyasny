@@ -1,12 +1,26 @@
-from fastapi import APIRouter, Form
-from fastapi.responses import RedirectResponse
+from fastapi import APIRouter, Form, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.models.report import ReportContext
 from app.services import report_service
 from app.services.report_service import ReportError
 from app.web.dependencies import CurrentUser, SessionDep
+from app.web.templating import templates
 
 router = APIRouter()
+
+
+@router.get("/my-reports", response_class=HTMLResponse)
+async def my_reports(
+    request: Request, user: CurrentUser, session: SessionDep
+):
+    """Жалобы, отправленные текущим пользователем, со статусом и ответом админа."""
+    reports = await report_service.list_reports_by_reporter(session, user.id)
+    return templates.TemplateResponse(
+        request,
+        "my_reports.html",
+        {"user": user, "reports": reports},
+    )
 
 
 @router.post("/report")

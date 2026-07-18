@@ -156,6 +156,11 @@ async def get_chat_for_user(
     )
 
 
+async def get_chat(session: AsyncSession, chat_id: int) -> Chat | None:
+    """Чат по id без проверки участников (для read-only просмотра админом)."""
+    return await session.get(Chat, chat_id)
+
+
 def other_participant(chat: Chat, user_id: int) -> int:
     return chat.user2_id if chat.user1_id == user_id else chat.user1_id
 

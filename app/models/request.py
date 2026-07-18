@@ -85,8 +85,10 @@ class Request(Base, TimestampMixin):
         DateTime(timezone=True), nullable=True
     )
 
-    # Завершение по обоюдному согласию: обе стороны жмут «Завершить».
-    # Когда оба флага True → status=completed, объясняющему +1 шоколадка.
+    # Завершение: инициирует только отправитель (sender) кнопкой «Завершить» —
+    # заявка сразу completed, объясняющему начисляются шоколадки. Поля
+    # sender_done/receiver_done оставлены для обратной совместимости со старыми
+    # записями, в новой логике не используются.
     sender_done: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False
     )
@@ -95,6 +97,16 @@ class Request(Base, TimestampMixin):
     )
     completed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
+    )
+
+    # Отмена объяснения. Отправитель жмёт «Отменить» → cancel_requested=True,
+    # ждём объясняющего. Объясняющий принимает → cancelled + возврат шоколадок;
+    # отклоняет → cancel_disputed=True (спор уходит админу на разбор).
+    cancel_requested: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    cancel_disputed: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
     )
 
     sender: Mapped["User"] = relationship(foreign_keys=[sender_id])
