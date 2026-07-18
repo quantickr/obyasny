@@ -141,7 +141,10 @@ async def update_profile(
     except ProfanityError as e:
         # Откатываем частичные изменения и возвращаем страницу с плашкой
         # ошибки и введёнными значениями — чтобы текст не сбрасывался.
+        # rollback() сбрасывает (expire) объекты сессии, поэтому обновляем
+        # user перед рендером — иначе ленивая подгрузка в async упадёт.
         await session.rollback()
+        await session.refresh(user)
         return await _render_profile(
             request,
             user,
@@ -247,6 +250,7 @@ async def add_topic(
         # Не сбрасываем введённое: возвращаем страницу с плашкой и текстом
         # формы добавления темы (топик/детали восстановятся в полях).
         await session.rollback()
+        await session.refresh(user)
         return await _render_profile(
             request,
             user,
@@ -316,6 +320,7 @@ async def update_topic_details(
         # Не сбрасываем введённое: возвращаем страницу с плашкой и текстом
         # деталей той темы, где обнаружился мат (подставится в её поле).
         await session.rollback()
+        await session.refresh(user)
         return await _render_profile(
             request,
             user,
