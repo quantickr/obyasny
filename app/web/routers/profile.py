@@ -28,15 +28,23 @@ from app.web.templating import templates
 router = APIRouter()
 
 
-@router.get("/profile", response_class=HTMLResponse)
-async def profile_page(
+async def _render_profile(
     request: Request,
-    user: CurrentUser,
-    session: SessionDep,
+    user,
+    session,
+    *,
     error: str = "",
-    saved: str = "",
+    saved: bool = False,
     tg: str = "",
+    form: dict | None = None,
+    status_code: int = 200,
 ):
+    """Рендерит страницу профиля.
+
+    `form` — введённые пользователем значения, которые надо вернуть в поля
+    формы после ошибки (например при мате), чтобы текст не терялся. Если не
+    передан — поля берут текущие значения из user.
+    """
     user_topics = await topic_service.get_user_topics(session, user.id)
     can_teach = [ut for ut in user_topics if ut.kind == TopicKind.can_teach]
     wants_learn = [ut for ut in user_topics if ut.kind == TopicKind.wants_learn]
@@ -51,8 +59,9 @@ async def profile_page(
             "balance": balance,
             "edu_levels": list(EduLevel),
             "error": error,
-            "saved": saved == "1",
+            "saved": saved,
             "tg": tg,
+            "form": form,
             "profile_locked": user_service.is_profile_locked(user),
             "profile_locked_until": user.profile_locked_until,
             # На доску можно с ≥1 темой «могу объяснить» (взамен обязательного
@@ -62,6 +71,21 @@ async def profile_page(
             # Telegram → предлагаем привязку модалкой, чтобы работал бот.
             "suggest_link_tg": bool(user.email) and not user.telegram_id,
         },
+        status_code=status_code,
+    )
+
+
+@router.get("/profile", response_class=HTMLResponse)
+async def profile_page(
+    request: Request,
+    user: CurrentUser,
+    session: SessionDep,
+    error: str = "",
+    saved: str = "",
+    tg: str = "",
+):
+    return await _render_profile(
+        request, user, session, error=error, saved=saved == "1", tg=tg
     )
 
 
@@ -115,8 +139,22 @@ async def update_profile(
         )
         await session.commit()
     except ProfanityError as e:
-        return RedirectResponse(
-            url=f"/profile?error={quote(str(e))}", status_code=303
+        # Откатываем частичные изменения и возвращаем страницу с плашкой
+        # ошибки и введёнными значениями — чтобы текст не сбрасывался.
+        await session.rollback()
+        return await _render_profile(
+            request,
+            user,
+            session,
+            error=str(e),
+            form={
+                "display_name": display_name,
+                "bio": bio,
+                "university": university,
+                "course": course_val,
+                "edu_level": edu_level,
+                "show_tg_username": show_tg_username == "on",
+            },
         )
     return RedirectResponse(url="/profile?saved=1", status_code=303)
 
@@ -178,6 +216,7 @@ async def reset_avatar(user: CurrentUser, session: SessionDep):
 
 @router.post("/profile/topics/add")
 async def add_topic(
+    request: Request,
     user: CurrentUser,
     session: SessionDep,
     topic_name: str = Form(...),
@@ -205,8 +244,21 @@ async def add_topic(
         )
         await session.commit()
     except ProfanityError as e:
-        return RedirectResponse(
-            url=f"/profile?error={quote(str(e))}", status_code=303
+        # Не сбрасываем введённое: возвращаем страницу с плашкой и текстом
+        # формы добавления темы (топик/детали восстановятся в полях).
+        await session.rollback()
+        return await _render_profile(
+            request,
+            user,
+            session,
+            error=str(e),
+            form={
+                "add_topic_name": topic_name,
+                "add_topic_kind": kind,
+                "add_topic_level": level,
+                "add_topic_details": details,
+                "add_topic_price": price,
+            },
         )
     return RedirectResponse(url="/profile", status_code=303)
 
@@ -247,6 +299,7 @@ async def update_topic_level(
 
 @router.post("/profile/topics/{user_topic_id}/details")
 async def update_topic_details(
+    request: Request,
     user: CurrentUser,
     session: SessionDep,
     user_topic_id: int,
@@ -260,8 +313,18 @@ async def update_topic_details(
         )
         await session.commit()
     except ProfanityError as e:
-        return RedirectResponse(
-            url=f"/profile?error={quote(str(e))}", status_code=303
+        # Не сбрасываем введённое: возвращаем страницу с плашкой и текстом
+        # деталей той темы, где обнаружился мат (подставится в её поле).
+        await session.rollback()
+        return await _render_profile(
+            request,
+            user,
+            session,
+            error=str(e),
+            form={
+                "details_error_topic_id": user_topic_id,
+                "details_text": details,
+            },
         )
     return RedirectResponse(url="/profile", status_code=303)
 

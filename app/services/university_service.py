@@ -69,6 +69,32 @@ def _best_match_priority(query: str, keys: list[str]) -> int | None:
     return None
 
 
+# Точное соответствие «нормализованный ключ → каноничное название вуза».
+# Строится один раз: для каждого вуза его название и все алиасы указывают
+# на каноничное название из справочника.
+_CANONICAL_BY_KEY: dict[str, str] = {}
+for _name, _rank, _keys in _INDEX:
+    for _key in _keys:
+        _CANONICAL_BY_KEY.setdefault(_key, _name)
+
+
+def canonical(value: str | None) -> str | None:
+    """Приводит вуз к каноничному написанию из справочника.
+
+    Если введённое (без учёта регистра, ё/е, пунктуации) точно совпадает с
+    названием или алиасом вуза — возвращает каноничное название («мфти» →
+    «МФТИ (Московский физико-технический институт)»). Иначе возвращает
+    исходный ввод без изменений (свободный ввод сохраняется).
+    """
+    if value is None:
+        return None
+    stripped = value.strip()
+    if not stripped:
+        return stripped
+    key = _normalize(stripped)
+    return _CANONICAL_BY_KEY.get(key, stripped)
+
+
 def suggest(query: str, limit: int = 10) -> list[str]:
     """Подсказки вузов по запросу. Пустой запрос → топ популярных."""
     q = _normalize(query)

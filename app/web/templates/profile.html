@@ -86,14 +86,15 @@
 
         <form method="post" action="/profile" class="space-y-3">
             <label class="block text-sm text-slate-500">Имя</label>
-            <input type="text" name="display_name" value="{{ user.display_name }}" required
+            <input type="text" name="display_name" value="{{ form.display_name if form else user.display_name }}" required
                    class="w-full border border-slate-300 rounded-md px-3 py-2">
             <div class="flex gap-2">
                 <div class="flex-1">
                     <label class="block text-sm text-slate-500">Уровень</label>
                     <select name="edu_level" id="profile-edu-level" required class="w-full border border-slate-300 rounded-md px-3 py-2">
+                        {% set cur_level = form.edu_level if form else user.edu_level.value %}
                         {% for lvl in edu_levels %}
-                        <option value="{{ lvl.value }}" {% if user.edu_level == lvl %}selected{% endif %}>
+                        <option value="{{ lvl.value }}" {% if cur_level == lvl.value %}selected{% endif %}>
                             {% if lvl.value == 'schoolchild' %}Школьник{% elif lvl.value == 'bachelor' %}Бакалавриат{% elif lvl.value == 'specialist' %}Специалитет{% elif lvl.value == 'master' %}Магистратура{% elif lvl.value == 'postgrad' %}Аспирантура{% else %}Выпустившийся{% endif %}
                         </option>
                         {% endfor %}
@@ -102,15 +103,16 @@
                 <div class="flex-1" id="profile-course-wrap">
                     <label class="block text-sm text-slate-500" id="profile-course-label">Курс</label>
                     <select name="course" id="profile-course" required class="w-full border border-slate-300 rounded-md px-3 py-2">
+                        {% set cur_course = form.course if form else user.course %}
                         {% for c in range(1, 12) %}
-                        <option value="{{ c }}" {% if user.course == c %}selected{% endif %}>{{ c }}</option>
+                        <option value="{{ c }}" {% if cur_course == c %}selected{% endif %}>{{ c }}</option>
                         {% endfor %}
                     </select>
                 </div>
             </div>
             <div id="profile-university-wrap">
                 <label class="block text-sm text-slate-500">Вуз</label>
-                <input type="text" name="university" value="{{ user.university or '' }}"
+                <input type="text" name="university" value="{{ (form.university if form else user.university) or '' }}"
                        placeholder="Например, МГУ"
                        list="university-suggest" autocomplete="off"
                        class="w-full border border-slate-300 rounded-md px-3 py-2">
@@ -118,9 +120,9 @@
             </div>
             <label class="block text-sm text-slate-500">О себе</label>
             <textarea name="bio" rows="3"
-                      class="w-full border border-slate-300 rounded-md px-3 py-2">{{ user.bio or '' }}</textarea>
+                      class="w-full border border-slate-300 rounded-md px-3 py-2">{{ (form.bio if form else user.bio) or '' }}</textarea>
             <label class="flex items-center gap-2 text-sm">
-                <input type="checkbox" name="show_tg_username" {% if user.show_tg_username %}checked{% endif %}>
+                <input type="checkbox" name="show_tg_username" {% if (form.show_tg_username if form else user.show_tg_username) %}checked{% endif %}>
                 Показывать мой Telegram (@{{ user.telegram_username or '-' }})
             </label>
             <button class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">Сохранить</button>
@@ -227,13 +229,14 @@
                 {% if ut.details %}
                 <p class="text-xs text-slate-500 mt-0.5 break-words whitespace-pre-wrap">{{ ut.details | censor }}</p>
                 {% endif %}
-                <details class="mt-0.5">
+                {% set det_err = form and form.details_error_topic_id is defined and form.details_error_topic_id == ut.id %}
+                <details class="mt-0.5" {% if det_err %}open{% endif %}>
                     <summary class="text-xs text-brand-600 cursor-pointer select-none hover:text-brand-700">
                         {% if ut.details %}Изменить описание{% else %}Добавить описание{% endif %}
                     </summary>
                     <form method="post" action="/profile/topics/{{ ut.id }}/details" class="mt-1 space-y-1">
                         <textarea name="details" rows="2" placeholder="Описание темы"
-                                  class="w-full border border-slate-300 rounded-md px-2 py-1.5 text-xs">{{ ut.details or '' }}</textarea>
+                                  class="w-full border border-slate-300 rounded-md px-2 py-1.5 text-xs">{{ form.details_text if det_err else (ut.details or '') }}</textarea>
                         <button class="text-xs bg-slate-700 text-white px-3 py-1 rounded-md hover:bg-slate-800">Сохранить</button>
                     </form>
                 </details>
@@ -267,13 +270,14 @@
                 {% if ut.details %}
                 <p class="text-xs text-slate-500 mt-0.5 break-words whitespace-pre-wrap">{{ ut.details | censor }}</p>
                 {% endif %}
-                <details class="mt-0.5">
+                {% set det_err = form and form.details_error_topic_id is defined and form.details_error_topic_id == ut.id %}
+                <details class="mt-0.5" {% if det_err %}open{% endif %}>
                     <summary class="text-xs text-brand-600 cursor-pointer select-none hover:text-brand-700">
                         {% if ut.details %}Изменить описание{% else %}Добавить описание{% endif %}
                     </summary>
                     <form method="post" action="/profile/topics/{{ ut.id }}/details" class="mt-1 space-y-1">
                         <textarea name="details" rows="2" placeholder="Описание темы"
-                                  class="w-full border border-slate-300 rounded-md px-2 py-1.5 text-xs">{{ ut.details or '' }}</textarea>
+                                  class="w-full border border-slate-300 rounded-md px-2 py-1.5 text-xs">{{ form.details_text if det_err else (ut.details or '') }}</textarea>
                         <button class="text-xs bg-slate-700 text-white px-3 py-1 rounded-md hover:bg-slate-800">Сохранить</button>
                     </form>
                 </details>
@@ -283,29 +287,33 @@
             {% endfor %}
         </div>
         <hr class="my-3">
+        {% set add_err = form and form.add_topic_name is defined %}
         <form method="post" action="/profile/topics/add" class="space-y-2">
             <input type="text" name="topic_name" id="topic-name" placeholder="Название темы" required
                    list="topic-suggest" autocomplete="off"
+                   value="{{ form.add_topic_name if add_err else '' }}"
                    class="w-full border border-slate-300 rounded-md px-3 py-2 text-sm">
             <datalist id="topic-suggest"></datalist>
-            <div id="topic-extra" class="hidden space-y-2">
+            <div id="topic-extra" class="{% if not add_err %}hidden {% endif %}space-y-2">
                 <div class="flex gap-2">
                     <select name="kind" id="topic-kind" class="border border-slate-300 rounded-md px-2 py-2 text-sm flex-1">
-                        <option value="can_teach">Могу объяснить</option>
-                        <option value="wants_learn">Хочу узнать</option>
+                        <option value="can_teach" {% if add_err and form.add_topic_kind == 'can_teach' %}selected{% endif %}>Могу объяснить</option>
+                        <option value="wants_learn" {% if add_err and form.add_topic_kind == 'wants_learn' %}selected{% endif %}>Хочу узнать</option>
                     </select>
                     <input type="number" name="level" min="1" max="10" placeholder="Оценка"
+                           value="{{ form.add_topic_level if add_err else '' }}"
                            title="Оценка за сессию/предмет (1-10), необязательно"
                            class="border border-slate-300 rounded-md px-2 py-2 text-sm w-24">
                     <select name="price" id="topic-price" title="Цена в шоколадках (только для «Могу объяснить», 0 - бесплатно)"
                             class="border border-slate-300 rounded-md px-2 py-2 text-sm w-28">
+                        {% set cur_price = form.add_topic_price if add_err else '1' %}
                         {% for n in range(0, 4) %}
-                        <option value="{{ n }}" {% if n == 1 %}selected{% endif %}>{% if n == 0 %}🆓 бесплатно{% else %}🍫{{ n }}{% endif %}</option>
+                        <option value="{{ n }}" {% if cur_price == n|string %}selected{% elif not add_err and n == 1 %}selected{% endif %}>{% if n == 0 %}🆓 бесплатно{% else %}🍫{{ n }}{% endif %}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <textarea name="details" id="topic-details" rows="2" placeholder="Подробнее"
-                          class="w-full border border-slate-300 rounded-md px-3 py-2 text-sm"></textarea>
+                          class="w-full border border-slate-300 rounded-md px-3 py-2 text-sm">{{ form.add_topic_details if add_err else '' }}</textarea>
             </div>
             <button class="w-full bg-slate-700 text-white py-2 rounded-md hover:bg-slate-800 text-sm">Добавить</button>
         </form>

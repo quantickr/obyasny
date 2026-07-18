@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.profanity import ensure_clean
 from app.core.security import hash_password, verify_password
 from app.models.user import EduLevel, User
-from app.services import chocolate_service
+from app.services import chocolate_service, university_service
 
 
 class AuthError(Exception):
@@ -226,7 +226,7 @@ async def register_email(
         email=email,
         password_hash=hash_password(password),
         display_name=ensure_clean(display_name.strip()) or email.split("@")[0],
-        university=ensure_clean(university.strip()),
+        university=ensure_clean(university_service.canonical(university)),
         course=clamp_course(course, edu_level),
         edu_level=edu_level,
     )
@@ -432,7 +432,9 @@ async def update_profile(
     if show_tg_username is not None:
         user.show_tg_username = show_tg_username
     if university is not None:
-        user.university = ensure_clean(university.strip())
+        # Приводим вуз к каноничному написанию из справочника («мфти» → «МФТИ…»),
+        # затем проверяем на мат.
+        user.university = ensure_clean(university_service.canonical(university))
     if edu_level is not None:
         user.edu_level = edu_level
     if course is not None:

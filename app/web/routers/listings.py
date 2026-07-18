@@ -115,6 +115,9 @@ async def board_page(
             for ut in topics:
                 if any(_fuzzy_hit(v, ut.topic.name) for v in variants):
                     return True
+                # Ищем и по подробностям темы («подробнее»), если они есть.
+                if ut.details and any(_fuzzy_hit(v, ut.details) for v in variants):
+                    return True
             uni = card.student.university or ""
             return any(_fuzzy_hit(v, uni) for v in variants)
 
