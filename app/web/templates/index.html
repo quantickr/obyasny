@@ -10,12 +10,12 @@
             Студенты объясняют студентам
         </span>
         <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight mb-4">
-            Найди, кто объяснит тему
+            Живой человек объяснит лучше, чем ИИ
         </h1>
         <p class="text-lg text-white/90 max-w-xl mx-auto mb-8">
-            Не понял тему? <b>«Объясни!»</b> найдёт того, кто разложит по полочкам.
-            Взамен объясни свою тему или отблагодари шоколадками 🍫.
-            Работает на сайте и в Telegram.
+            Не понял тему? Найди того, кто уже разобрался — одногруппника или
+            старшекурсника с твоего потока. Он объяснит именно то, что было
+            на лекции у твоего преподавателя, а не заставит пересказывать её боту.
         </p>
         <div class="flex flex-wrap gap-3 justify-center">
             {% if user %}
@@ -36,6 +36,46 @@
     </div>
 </section>
 
+<!-- Чем отличается от ИИ -->
+<section class="mt-14">
+    <h2 class="text-center text-2xl font-extrabold mb-3">
+        Чем это лучше <span class="brand-text-gradient">чат-бота</span>
+    </h2>
+    <p class="text-center text-slate-600 max-w-2xl mx-auto mb-8">
+        Иногда проще спросить человека, который на год старше или в параллельной
+        группе лучше разобрался в предмете, чем заливать нейросети всю лекцию и
+        вытягивать из неё детали. Здесь тебе объяснят вживую — под твоего
+        преподавателя и твой курс.
+    </p>
+    <div class="grid sm:grid-cols-3 gap-6">
+        <div class="bg-white rounded-3xl border border-brand-100 p-6 shadow-soft">
+            <div class="text-4xl mb-3">🗣️</div>
+            <h3 class="font-extrabold text-lg mb-1">Живое общение</h3>
+            <p class="text-slate-600 text-sm">
+                Реальный студент, а не ИИ: можно переспросить, уточнить и копнуть
+                глубже в конкретную тему — так, как бот не подаст.
+            </p>
+        </div>
+        <div class="bg-white rounded-3xl border border-brand-100 p-6 shadow-soft">
+            <div class="text-4xl mb-3">🎯</div>
+            <h3 class="font-extrabold text-lg mb-1">Под твой вуз и курс</h3>
+            <p class="text-slate-600 text-sm">
+                Выбирай собеседника по вузу, курсу и уровню образования — он
+                объяснит именно то, что было у твоего преподавателя на лекции.
+            </p>
+        </div>
+        <div class="bg-white rounded-3xl border border-brand-100 p-6 shadow-soft">
+            <div class="text-4xl mb-3">🍫</div>
+            <h3 class="font-extrabold text-lg mb-1">Понятная цена</h3>
+            <p class="text-slate-600 text-sm">
+                У каждого видно, что он может объяснить, насколько уверен в теме
+                и сколько стоит объяснение. Шоколадки — внутренняя валюта портала,
+                а кто-то объяснит и бесплатно.
+            </p>
+        </div>
+    </div>
+</section>
+
 <!-- Как это работает: 3 шага -->
 <section class="mt-14">
     <h2 class="text-center text-2xl font-extrabold mb-8">
@@ -45,8 +85,8 @@
         <div class="bg-white rounded-3xl border border-brand-100 p-6 text-center shadow-soft">
             <div class="text-6xl mb-3 animate-floaty">🔍</div>
             <div class="text-sm font-bold text-brand-600 mb-1">Шаг 1</div>
-            <h3 class="font-extrabold text-lg mb-2">Найди тему</h3>
-            <p class="text-slate-600 text-sm">Ищи на доске того, кто объяснит непонятное — по любой теме и предмету.</p>
+            <h3 class="font-extrabold text-lg mb-2">Найди человека</h3>
+            <p class="text-slate-600 text-sm">Ищи на доске того, кто объяснит непонятное — по вузу, курсу, предмету и теме.</p>
         </div>
         <div class="bg-white rounded-3xl border border-brand-100 p-6 text-center shadow-soft">
             <div class="text-6xl mb-3 animate-floaty" style="animation-delay:.4s">💬</div>
