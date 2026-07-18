@@ -40,6 +40,11 @@
                     → на
                     <a href="/u/{{ r.reported_user_id }}" class="font-semibold text-red-600">{{ r.reported.display_name if r.reported else '—' }}</a>
                     <span class="text-xs text-slate-400">({{ ctx_ru.get(r.context.value, r.context.value) }})</span>
+                    {% set _rc = resolved_counts.get(r.reported_user_id, 0) %}
+                    {% if _rc > 0 %}
+                    <span class="text-xs text-red-600 font-medium ml-1"
+                          title="Подтверждённых жалоб на пользователя ранее">📋 подтв. жалоб: {{ _rc }}</span>
+                    {% endif %}
                 </p>
                 {% if r.reason %}<p class="text-sm text-slate-600 break-words whitespace-pre-wrap mt-1">{{ r.reason }}</p>{% endif %}
             </div>

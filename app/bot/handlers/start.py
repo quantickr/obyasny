@@ -1,6 +1,7 @@
 from aiogram import Router
 from aiogram.filters import CommandObject, CommandStart
 from aiogram.types import Message
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.keyboards import main_menu, register_button
@@ -23,18 +24,29 @@ async def start_with_code(
             _, merged = await user_service.link_or_merge_telegram(
                 session, user_id, tg.id, tg.username
             )
-            text = (
-                "✅ Аккаунты объединены! Твои темы и прогресс из бота "
-                "перенесены на сайт."
-                if merged
-                else "✅ Аккаунт привязан! Теперь бот и сайт работают вместе."
-            )
-            await message.answer(text, reply_markup=main_menu())
-            return
+            # Коммитим ЗДЕСЬ, до сообщения об успехе. Иначе при ошибке БД на
+            # commit в middleware (напр. занятый telegram_id → IntegrityError)
+            # сессия откатывалась бы, но пользователь уже увидел «✅ привязан».
+            await session.commit()
         except user_service.AuthError as e:
-            # Откатываем полусостояние, иначе middleware закоммитит его.
             await session.rollback()
             await message.answer(f"⚠️ {e}")
+            return
+        except IntegrityError:
+            await session.rollback()
+            await message.answer(
+                "⚠️ Не получилось привязать: этот Telegram уже используется "
+                "другим аккаунтом. Проверьте, не привязывали ли вы его раньше."
+            )
+            return
+        text = (
+            "✅ Аккаунты объединены! Твои темы и прогресс из бота "
+            "перенесены на сайт."
+            if merged
+            else "✅ Аккаунт привязан! Теперь бот и сайт работают вместе."
+        )
+        await message.answer(text, reply_markup=main_menu())
+        return
 
     # Код невалиден/просрочен — обычный старт.
     await _require_registered(message, session)

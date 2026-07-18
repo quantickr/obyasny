@@ -93,6 +93,10 @@ async def reports_page(
     reports = await report_service.list_reports(
         session, status_enum, context_enum
     )
+    # Сколько ранее подтверждённых жалоб было на каждого нарушителя.
+    resolved_counts = await report_service.resolved_counts_by_users(
+        session, [r.reported_user_id for r in reports]
+    )
     # Для мини-панелей: темы reported (жалобы на доску) и статус мута (чат).
     topics_by_user: dict[int, dict[str, list]] = {}
     muted_by_user: dict[int, bool] = {}
@@ -123,6 +127,7 @@ async def reports_page(
             "context": context_enum.value if context_enum else "",
             "topics_by_user": topics_by_user,
             "muted_by_user": muted_by_user,
+            "resolved_counts": resolved_counts,
         },
     )
 

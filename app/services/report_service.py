@@ -100,3 +100,22 @@ async def open_count(session: AsyncSession) -> int:
         Report.status == ReportStatus.open
     )
     return int(await session.scalar(stmt) or 0)
+
+
+async def resolved_counts_by_users(
+    session: AsyncSession, user_ids: list[int]
+) -> dict[int, int]:
+    """Сколько подтверждённых (resolved) жалоб на каждого из user_ids.
+    Пользователи без resolved-жалоб в словаре отсутствуют (get → 0)."""
+    if not user_ids:
+        return {}
+    stmt = (
+        select(Report.reported_user_id, func.count(Report.id))
+        .where(
+            Report.reported_user_id.in_(user_ids),
+            Report.status == ReportStatus.resolved,
+        )
+        .group_by(Report.reported_user_id)
+    )
+    rows = await session.execute(stmt)
+    return {uid: cnt for uid, cnt in rows.all()}

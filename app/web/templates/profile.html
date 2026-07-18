@@ -6,7 +6,7 @@
         <div class="flex items-center justify-between mb-4">
             <h1 class="text-xl font-bold">Профиль</h1>
             <div class="flex items-center gap-2">
-                <span class="text-sm bg-amber-50 text-amber-700 px-2 py-1 rounded font-semibold" title="Рейтинг">⭐ {{ user.rating }}</span>
+                <span class="text-sm px-2 py-1 rounded font-semibold" style="{{ user.rating | rating_style }}" title="Рейтинг">⭐ {{ user.rating }}</span>
                 <span class="text-sm bg-amber-100 text-amber-800 px-2 py-1 rounded">🍫 {{ balance }}</span>
             </div>
         </div>

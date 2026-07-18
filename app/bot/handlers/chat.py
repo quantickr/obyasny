@@ -1,4 +1,5 @@
 from aiogram import F, Router
+from aiogram.dispatcher.event.bases import skip
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
@@ -24,6 +25,17 @@ _CTX_RU = {
     "listing": "по объявлению",
     "match": "подбор пары",
     "direct": "личный чат",
+}
+
+#: Тексты кнопок главного меню (синхронно с keyboards.main_menu). В режиме
+#: активного чата relay-хендлер перехватывает любой текст; чтобы кнопки меню
+#: продолжали работать, при их нажатии выходим из чата и пропускаем апдейт дальше.
+_MENU_TEXTS = {
+    "🔍 Найти помощь",
+    "📥 Заявки",
+    "💬 Чаты",
+    "🍫 Баланс",
+    "👤 Профиль",
 }
 
 
@@ -178,6 +190,13 @@ async def relay_from_telegram(
     message: Message, state: FSMContext, session: AsyncSession
 ):
     """Сообщение из Telegram в режиме активного чата → пересылаем на сайт."""
+    # Кнопка главного меню в режиме чата → выходим из чата и передаём апдейт
+    # дальше по роутерам, чтобы сработал «настоящий» хендлер кнопки (иначе текст
+    # молча уходил бы в чат, и кнопки меню казались бы нерабочими).
+    if message.text in _MENU_TEXTS:
+        await state.clear()
+        skip()
+
     data = await state.get_data()
     chat_id = data.get("chat_id")
     if not chat_id:

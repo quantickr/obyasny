@@ -17,7 +17,7 @@
         </a>
         <div class="min-w-0">
             <a href="/u/{{ student.id }}" class="font-bold leading-tight break-words hover:text-brand-600 transition-colors">{{ student.display_name }}</a>
-            <span class="inline-block ml-1 text-[11px] font-semibold bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded align-middle" title="Рейтинг">⭐ {{ student.rating }}</span>
+            <span class="inline-block ml-1 text-[11px] font-semibold px-1.5 py-0.5 rounded align-middle" style="{{ student.rating | rating_style }}" title="Рейтинг">⭐ {{ student.rating }}</span>
             {% if already_interacted %}
             <span class="inline-block ml-1 text-[11px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded align-middle">Вы уже взаимодействовали</span>
             {% endif %}

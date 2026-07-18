@@ -19,7 +19,7 @@
             <div class="min-w-0">
                 <h1 class="text-xl font-bold break-words">
                     {{ profile_user.display_name }}
-                    <span class="inline-block ml-1 text-xs font-semibold bg-amber-50 text-amber-700 px-2 py-0.5 rounded align-middle" title="Рейтинг">⭐ {{ profile_user.rating }}</span>
+                    <span class="inline-block ml-1 text-xs font-semibold px-2 py-0.5 rounded align-middle" style="{{ profile_user.rating | rating_style }}" title="Рейтинг">⭐ {{ profile_user.rating }}</span>
                 </h1>
                 {% if profile_user.university %}
                 <p class="text-sm text-slate-500 break-words">

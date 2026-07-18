@@ -70,6 +70,25 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Объясни!", lifespan=lifespan)
 
+
+@app.middleware("http")
+async def _no_store_dynamic(request: Request, call_next):
+    """Запрещает кэширование динамических ответов (HTML, редиректы с Set-Cookie,
+    JSON). Без этого прокси/CDN может закэшировать персональную страницу или
+    ответ с cookie сессии и отдать её другому пользователю. Статику и загрузки
+    (их отдаёт nginx с expires) кэшировать можно."""
+    response = await call_next(request)
+    path = request.url.path
+    if path.startswith("/static/") or path.startswith("/uploads/"):
+        return response
+    response.headers["Cache-Control"] = (
+        "no-store, no-cache, must-revalidate, private"
+    )
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Vary"] = "Cookie"
+    return response
+
+
 # Директория загрузок должна существовать до монтирования StaticFiles.
 (UPLOAD_DIR / "avatars").mkdir(parents=True, exist_ok=True)
 
