@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Споры об отмене — Админ{% endblock %}
+{% block title %}Споры об отмене - Админ{% endblock %}
 {% block content %}
 <div class="flex items-center justify-between mb-4">
     <h1 class="text-xl font-bold">Споры об отмене</h1>
@@ -18,14 +18,14 @@
         <div class="flex items-start justify-between gap-3 flex-wrap">
             <div class="min-w-0">
                 <p class="text-sm">
-                    <a href="/u/{{ req.sender_id }}" class="font-semibold text-brand-600">{{ req.sender.display_name if req.sender else '—' }}</a>
+                    <a href="/u/{{ req.sender_id }}" class="font-semibold text-brand-600">{{ req.sender.display_name if req.sender else '-' }}</a>
                     <span class="text-xs text-slate-400">(отправитель)</span>
                     →
-                    <a href="/u/{{ req.receiver_id }}" class="font-semibold text-emerald-700">{{ req.receiver.display_name if req.receiver else '—' }}</a>
+                    <a href="/u/{{ req.receiver_id }}" class="font-semibold text-emerald-700">{{ req.receiver.display_name if req.receiver else '-' }}</a>
                     <span class="text-xs text-slate-400">(объясняющий)</span>
                 </p>
                 <p class="text-sm text-slate-600 mt-1">
-                    тема <b class="break-words">{{ req.topic.name if req.topic else '—' }}</b>
+                    тема <b class="break-words">{{ req.topic.name if req.topic else '-' }}</b>
                     · цена {{ req.price }} 🍫
                 </p>
             </div>

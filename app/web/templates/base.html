@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Объясни! — студенты объясняют студентам{% endblock %}</title>
+    <title>{% block title %}Объясни! - студенты объясняют студентам{% endblock %}</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎓</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -109,7 +109,7 @@
     </main>
     <footer class="border-t border-brand-100 mt-8">
         <div class="max-w-5xl mx-auto px-4 py-6 text-center text-xs text-slate-400">
-            <span class="brand-text-gradient font-bold">Объясни!</span> — студенты объясняют студентам 🎓🍫
+            <span class="brand-text-gradient font-bold">Объясни!</span> - студенты объясняют студентам 🎓🍫
         </div>
     </footer>
 
@@ -158,7 +158,7 @@
                 osc.start();
                 osc.stop(ctx.currentTime + 0.35);
                 osc.onended = function () { ctx.close(); };
-            } catch (e) { /* звук недоступен — не критично */ }
+            } catch (e) { /* звук недоступен - не критично */ }
         }
 
         function toast(text) {
@@ -185,7 +185,7 @@
                 const data = await resp.json();
                 setBadge(badgeMsg, data.messages);
                 setBadge(badgeReq, data.requests);
-                // Новое сообщение пришло (рост счётчика) — тост + звук.
+                // Новое сообщение пришло (рост счётчика) - тост + звук.
                 if (prevMsg !== null && data.messages > prevMsg) {
                     // На открытой странице чата уведомление не дублируем.
                     if (!/^\/chat\//.test(location.pathname)) {
@@ -194,7 +194,7 @@
                     }
                 }
                 prevMsg = data.messages;
-                // Шоколадки: рост баланса — получил, падение — потратил/отдал.
+                // Шоколадки: рост баланса - получил, падение - потратил/отдал.
                 if (typeof data.chocolates === 'number') {
                     if (prevChoc !== null && data.chocolates !== prevChoc) {
                         const diff = data.chocolates - prevChoc;
@@ -209,7 +209,7 @@
                     }
                     prevChoc = data.chocolates;
                 }
-            } catch (e) { /* сеть недоступна — пропускаем */ }
+            } catch (e) { /* сеть недоступна - пропускаем */ }
         }
 
         poll();

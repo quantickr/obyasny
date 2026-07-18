@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Администраторы — Объясни!{% endblock %}
+{% block title %}Администраторы - Объясни!{% endblock %}
 {% block content %}
 <div class="flex items-center gap-3 mb-4">
     <a href="/admin" class="text-sm text-slate-400 hover:text-brand-600">← Админ-панель</a>
@@ -8,7 +8,7 @@
 
 <p class="text-sm text-slate-500 mb-4">
     Суперадмин выдаёт мини-админам точечные права. Чтобы назначить нового
-    администратора — откройте карточку пользователя и включите доступ в админку.
+    администратора - откройте карточку пользователя и включите доступ в админку.
 </p>
 
 <div class="space-y-4">
@@ -29,7 +29,7 @@
         {% if a.is_superadmin %}
         <p class="text-sm text-slate-500">Полный доступ ко всем функциям (не редактируется).</p>
         {% elif a.id == user.id %}
-        <p class="text-sm text-slate-500">Это вы — права нельзя изменить у себя.</p>
+        <p class="text-sm text-slate-500">Это вы - права нельзя изменить у себя.</p>
         {% else %}
         <form method="post" action="/admin/users/{{ a.id }}/rights"
               class="flex flex-wrap items-center gap-4 text-sm">

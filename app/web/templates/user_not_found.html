@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Пользователь не найден - Объясни!{% endblock %}
+{% block content %}
+<div class="max-w-md mx-auto text-center bg-white p-8 rounded-xl border border-slate-200">
+    <p class="text-4xl mb-3">🚫</p>
+    <h1 class="text-xl font-bold mb-2">Пользователь удалил страницу</h1>
+    <p class="text-sm text-slate-500 mb-6">Такого пользователя больше не существует - возможно, он удалил свой аккаунт.</p>
+    <a href="/board" class="inline-block text-sm bg-brand-500 text-white px-5 py-2 rounded-md hover:bg-brand-600">Вернуться к доске</a>
+</div>
+{% endblock %}

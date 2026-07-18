@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Профиль — Объясни!{% endblock %}
+{% block title %}Профиль - Объясни!{% endblock %}
 {% block content %}
 <div class="grid md:grid-cols-2 gap-6">
     <div class="bg-white p-6 rounded-xl border border-slate-200">
@@ -121,7 +121,7 @@
                       class="w-full border border-slate-300 rounded-md px-3 py-2">{{ user.bio or '' }}</textarea>
             <label class="flex items-center gap-2 text-sm">
                 <input type="checkbox" name="show_tg_username" {% if user.show_tg_username %}checked{% endif %}>
-                Показывать мой Telegram (@{{ user.telegram_username or '—' }})
+                Показывать мой Telegram (@{{ user.telegram_username or '-' }})
             </label>
             <button class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">Сохранить</button>
         </form>
@@ -144,10 +144,10 @@
             <label class="block text-sm text-slate-500 mb-1">Email</label>
             {% if user.email %}
                 {% if user.email_verified %}
-                <p class="text-sm text-green-600 mb-2">✓ {{ user.email }} — подтверждён</p>
+                <p class="text-sm text-green-600 mb-2">✓ {{ user.email }} - подтверждён</p>
                 {% else %}
                 <p class="text-sm text-amber-600 mb-2">
-                    {{ user.email }} — не подтверждён.
+                    {{ user.email }} - не подтверждён.
                     <a href="/verify-email" class="underline">Подтвердить</a>
                 </p>
                 {% endif %}
@@ -169,7 +169,7 @@
         <div>
             <p class="text-sm text-slate-500 mb-2">
                 {% if user.on_board %}
-                Вы на доске — другие студенты видят ваш профиль и темы.
+                Вы на доске - другие студенты видят ваш профиль и темы.
                 {% else %}
                 Выложите себя на доску, чтобы вас нашли по вашим темам.
                 {% endif %}
@@ -202,7 +202,7 @@
                     <div class="flex items-center gap-2 shrink-0">
                         <form method="post" action="/profile/topics/{{ ut.id }}/price">
                             <select name="price" onchange="this.form.submit()"
-                                    title="Цена в шоколадках (0-3, 0 — бесплатно)"
+                                    title="Цена в шоколадках (0-3, 0 - бесплатно)"
                                     class="border border-slate-300 rounded-md px-1.5 py-1 text-xs">
                                 {% for n in range(0, 4) %}
                                 <option value="{{ n }}" {% if ut.price == n or (ut.price is none and n == 1) %}selected{% endif %}>{% if n == 0 %}🆓 бесплатно{% else %}🍫{{ n }}{% endif %}</option>
@@ -213,7 +213,7 @@
                             <select name="level" onchange="this.form.submit()"
                                     title="Оценка (1-10)"
                                     class="border border-slate-300 rounded-md px-1.5 py-1 text-xs">
-                                <option value="" {% if not ut.level %}selected{% endif %}>—</option>
+                                <option value="" {% if not ut.level %}selected{% endif %}>-</option>
                                 {% for n in range(1, 11) %}
                                 <option value="{{ n }}" {% if ut.level == n %}selected{% endif %}>{{ n }}/10</option>
                                 {% endfor %}
@@ -253,7 +253,7 @@
                             <select name="level" onchange="this.form.submit()"
                                     title="Оценка (1-10)"
                                     class="border border-slate-300 rounded-md px-1.5 py-1 text-xs">
-                                <option value="" {% if not ut.level %}selected{% endif %}>—</option>
+                                <option value="" {% if not ut.level %}selected{% endif %}>-</option>
                                 {% for n in range(1, 11) %}
                                 <option value="{{ n }}" {% if ut.level == n %}selected{% endif %}>{{ n }}/10</option>
                                 {% endfor %}
@@ -297,7 +297,7 @@
                     <input type="number" name="level" min="1" max="10" placeholder="Оценка"
                            title="Оценка за сессию/предмет (1-10), необязательно"
                            class="border border-slate-300 rounded-md px-2 py-2 text-sm w-24">
-                    <select name="price" id="topic-price" title="Цена в шоколадках (только для «Могу объяснить», 0 — бесплатно)"
+                    <select name="price" id="topic-price" title="Цена в шоколадках (только для «Могу объяснить», 0 - бесплатно)"
                             class="border border-slate-300 rounded-md px-2 py-2 text-sm w-28">
                         {% for n in range(0, 4) %}
                         <option value="{{ n }}" {% if n == 1 %}selected{% endif %}>{% if n == 0 %}🆓 бесплатно{% else %}🍫{{ n }}{% endif %}</option>
@@ -336,8 +336,8 @@
         <div class="text-4xl mb-2">📲</div>
         <h2 class="text-xl font-bold mb-2">Привяжите Telegram</h2>
         <p class="text-sm text-slate-500 mb-5">
-            Чтобы пользоваться ботом — заявки, чаты и уведомления прямо в
-            Telegram — привяжите свой аккаунт. Без привязки бот работать не будет.
+            Чтобы пользоваться ботом - заявки, чаты и уведомления прямо в
+            Telegram - привяжите свой аккаунт. Без привязки бот работать не будет.
         </p>
         <form method="post" action="/profile/link-telegram">
             <button class="w-full bg-sky-500 text-white py-2.5 rounded-lg font-bold hover:bg-sky-600 transition-colors">Привязать Telegram</button>
@@ -360,7 +360,7 @@
     if (!name || !extra) return;
     function sync() {
         extra.classList.toggle('hidden', name.value.trim().length === 0);
-        // Цена — только для «Могу объяснить».
+        // Цена - только для «Могу объяснить».
         if (kind && price) {
             price.classList.toggle('hidden', kind.value !== 'can_teach');
         }
@@ -390,14 +390,14 @@
         const isGraduate = level.value === 'graduate';
         courseLabel.textContent = isSchool ? 'Класс' : 'Курс';
         uniWrap.classList.toggle('hidden', isSchool);
-        // У выпустившегося курса нет — прячем поле, сервер зафиксирует 1.
+        // У выпустившегося курса нет - прячем поле, сервер зафиксирует 1.
         courseWrap.classList.toggle('hidden', isGraduate);
         if (isGraduate) {
             course.value = '1';
             return;
         }
         const max = MAX_COURSE[level.value] || 11;
-        // Прячем лишние варианты; если выбранный вне диапазона — сбрасываем на 1.
+        // Прячем лишние варианты; если выбранный вне диапазона - сбрасываем на 1.
         for (const opt of course.options) {
             const over = parseInt(opt.value, 10) > max;
             opt.hidden = over;
@@ -525,7 +525,7 @@
             const fd = new FormData();
             fd.append('file', blob, 'avatar.png');
             // Body собирается вручную (не из <form>), поэтому CSRF-токен из
-            // cookie добавляем сами — иначе middleware отклонит запрос.
+            // cookie добавляем сами - иначе middleware отклонит запрос.
             const m = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
             if (m) fd.append('csrf_token', decodeURIComponent(m[1]));
             try {

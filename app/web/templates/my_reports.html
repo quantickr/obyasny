@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Мои жалобы — Объясни!{% endblock %}
+{% block title %}Мои жалобы - Объясни!{% endblock %}
 {% block content %}
 {% set ctx_ru = {'board': 'с доски', 'profile': 'из профиля', 'chat': 'из чата'} %}
 {% set status_ru = {'open': 'на рассмотрении', 'resolved': 'подтверждена', 'dismissed': 'отклонена'} %}
@@ -16,7 +16,7 @@
             <div class="min-w-0">
                 <p class="text-sm">
                     На
-                    <a href="/u/{{ r.reported_user_id }}" class="font-semibold text-brand-600">{{ r.reported.display_name if r.reported else '—' }}</a>
+                    {% if r.reported %}<a href="/u/{{ r.reported_user_id }}" class="font-semibold text-brand-600">{{ r.reported.display_name }}</a>{% else %}<span class="font-semibold text-slate-400 italic">аккаунт удалён</span>{% endif %}
                     <span class="text-xs text-slate-400">({{ ctx_ru.get(r.context.value, r.context.value) }})</span>
                 </p>
                 {% if r.reason %}<p class="text-sm text-slate-600 break-words whitespace-pre-wrap mt-1">{{ r.reason }}</p>{% endif %}

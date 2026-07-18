@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Регистрация — Объясни!{% endblock %}
+{% block title %}Регистрация - Объясни!{% endblock %}
 {% block content %}
 <div class="max-w-sm mx-auto bg-white p-7 rounded-2xl border border-brand-100 shadow-soft">
     <div class="text-center mb-5">
@@ -16,7 +16,7 @@
         <input type="email" name="email" placeholder="Email" required
                class="w-full border border-brand-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent">
         <p class="bg-amber-50 text-amber-700 text-xs p-2.5 rounded-lg">
-            ⚠️ Лучше не использовать почту на <b>mail.ru</b> — из-за жёсткого фильтра письмо с кодом подтверждения может не дойти. Рекомендуем Gmail, Яндекс или другой сервис.
+            ⚠️ Лучше не использовать почту на <b>mail.ru</b> - из-за жёсткого фильтра письмо с кодом подтверждения может не дойти. Рекомендуем Gmail, Яндекс или другой сервис.
         </p>
         <input type="password" name="password" placeholder="Пароль" required minlength="6" id="reg-password"
                class="w-full border border-brand-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent">
@@ -97,7 +97,7 @@
     pw2.addEventListener('input', check);
 })();
 
-// Школьник: вместо «Курс» — «Класс», вуз не нужен (подставляем «Школа»).
+// Школьник: вместо «Курс» - «Класс», вуз не нужен (подставляем «Школа»).
 // Диапазон курсов/классов зависит от уровня образования.
 (function () {
     const level = document.getElementById('reg-edu-level');
@@ -132,7 +132,7 @@
             course.classList.remove('hidden');
         }
         const max = MAX_COURSE[level.value] || 11;
-        // Прячем варианты сверх диапазона; выбранный вне диапазона — на плейсхолдер.
+        // Прячем варианты сверх диапазона; выбранный вне диапазона - на плейсхолдер.
         for (const opt of course.options) {
             if (!opt.value) continue;  // плейсхолдер оставляем
             const over = parseInt(opt.value, 10) > max;

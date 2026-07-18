@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Заявки — Объясни!{% endblock %}
+{% block title %}Заявки - Объясни!{% endblock %}
 {% block content %}
 {% set status_ru = {'pending': 'ожидает', 'accepted': 'принята', 'declined': 'отклонена', 'cancelled': 'отменена', 'completed': 'завершена'} %}
 <h1 class="text-xl font-bold mb-4">Заявки</h1>
@@ -33,7 +33,7 @@
                 <a href="/chat/{{ req.chat_id }}" class="text-indigo-600 text-sm">Чат →</a>
                 {% endif %}
                 {% if req.cancel_disputed %}
-                {# спор у админа — кнопок нет #}
+                {# спор у админа - кнопок нет #}
                 {% elif is_sender and not req.cancel_requested %}
                 <form method="post" action="/requests/{{ req.id }}/complete"
                       onsubmit="return confirm('Вы уверены, что хотите завершить? Ваша шоколадка уйдёт объясняющему.');">

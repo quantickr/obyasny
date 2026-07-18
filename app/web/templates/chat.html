@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Чат — Объясни!{% endblock %}
+{% block title %}Чат - Объясни!{% endblock %}
 {% block content %}
 {% set ctx_ru = {'request': 'по заявке', 'listing': 'по объявлению', 'match': 'подбор пары', 'direct': 'личный чат'} %}
 <div class="flex gap-4 h-[70vh] relative">
 <!-- Затемнение под выдвинутой панелью (только узкие экраны) -->
 <div id="chat-list-backdrop" class="hidden md:hidden fixed inset-0 z-30 bg-black/40"></div>
-<!-- Левый столбик всех чатов. На узких экранах — выдвижная панель слева. -->
+<!-- Левый столбик всех чатов. На узких экранах - выдвижная панель слева. -->
 <aside id="chat-list"
        class="hidden md:flex md:flex-col md:static md:z-auto md:w-64 md:shrink-0 md:translate-x-0
               fixed inset-y-0 left-0 z-40 w-72 max-w-[85vw] flex-col
@@ -31,7 +31,7 @@
             <div class="min-w-0 flex-1">
                 <p class="text-sm font-medium truncate">{{ c.title if c.title else (p.display_name if p else 'Собеседник') }}</p>
                 <p class="text-xs text-slate-400 truncate">
-                    {% if c.completed_at %}✓ завершено{% elif lm %}{{ lm.body | censor }}{% else %}—{% endif %}
+                    {% if c.completed_at %}✓ завершено{% elif lm %}{{ lm.body | censor }}{% else %}-{% endif %}
                 </p>
             </div>
             {% if un %}
@@ -148,7 +148,7 @@
     </div>
     {% if completed %}
     <div class="p-3 border-t border-slate-200 text-center text-sm text-slate-400">
-        Задача завершена — чат доступен только для чтения.
+        Задача завершена - чат доступен только для чтения.
     </div>
     {% else %}
     <form id="chat-form" class="p-3 border-t border-slate-200 flex gap-2 items-end">
@@ -206,7 +206,7 @@
             quote.textContent = replyPreview;
             bubble.appendChild(quote);
         }
-        // Тело сообщения — отдельным текстовым узлом (безопасно от XSS).
+        // Тело сообщения - отдельным текстовым узлом (безопасно от XSS).
         bubble.appendChild(document.createTextNode(body));
         if (src === 'telegram') {
             const tag = document.createElement('span');
@@ -241,7 +241,7 @@
         input.style.height = 'auto';
     }
 
-    // Завершённый чат — только чтение: слушатели ввода не навешиваем.
+    // Завершённый чат - только чтение: слушатели ввода не навешиваем.
     if (!readOnly) {
         // Enter = отправить, Shift+Enter = перенос строки.
         input.addEventListener('keydown', (e) => {

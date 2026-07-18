@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Доска — Объясни!{% endblock %}
+{% block title %}Доска - Объясни!{% endblock %}
 {% block content %}
 <div class="mb-6">
     <h1 class="text-2xl font-extrabold">Доска студентов</h1>
@@ -43,7 +43,7 @@
 
 {% block scripts %}
 <script>
-    // Отправка заявки из карточки (делегирование на document — работает и после
+    // Отправка заявки из карточки (делегирование на document - работает и после
     // AJAX-подмены результатов).
     document.addEventListener('submit', async function (e) {
         const form = e.target.closest('.js-request-form');
@@ -76,6 +76,100 @@
             btn.disabled = false;
         }
     });
+
+    // Masonry-раскладка: 2 столбца на ПК, 1 на мобильном. Каждая следующая
+    // карточка добавляется в самую короткую колонку - так вертикальные зазоры
+    // минимальны, а карточки разной высоты подтягиваются друг к другу.
+    (function () {
+        const GAP = 20; // соответствует gap-5 (1.25rem)
+
+        function columnsFor(width) {
+            return width >= 768 ? 2 : 1;
+        }
+
+        function layout(container) {
+            // Восстанавливаем исходный список карточек: либо из «живых»
+            // колонок, либо напрямую из детей контейнера при первом проходе.
+            let items = container._masonryItems;
+            if (!items) {
+                items = Array.from(container.querySelectorAll('.js-masonry-item'));
+                container._masonryItems = items;
+            }
+            const cols = columnsFor(window.innerWidth);
+            if (container._masonryCols === cols && container._masonryLaidOut) {
+                // Число колонок не изменилось - перекладка не требуется,
+                // высоты пересчитаются самим потоком.
+                return;
+            }
+            container._masonryCols = cols;
+            container._masonryLaidOut = true;
+
+            // Замеряем высоты, пока карточки ещё в DOM (после detach offsetHeight = 0).
+            const itemHeights = items.map(function (it) { return it.offsetHeight; });
+
+            container.innerHTML = '';
+            container.style.display = 'flex';
+            container.style.alignItems = 'flex-start';
+            container.style.gap = GAP + 'px';
+
+            const columnEls = [];
+            for (let i = 0; i < cols; i++) {
+                const col = document.createElement('div');
+                col.style.flex = '1 1 0';
+                col.style.minWidth = '0';
+                col.style.display = 'flex';
+                col.style.flexDirection = 'column';
+                col.style.gap = GAP + 'px';
+                container.appendChild(col);
+                columnEls.push(col);
+            }
+
+            if (cols === 1) {
+                items.forEach(function (it) { columnEls[0].appendChild(it); });
+                return;
+            }
+
+            // Раскладка по самой короткой колонке.
+            const heights = new Array(cols).fill(0);
+            items.forEach(function (it, idx) {
+                let shortest = 0;
+                for (let i = 1; i < cols; i++) {
+                    if (heights[i] < heights[shortest]) shortest = i;
+                }
+                columnEls[shortest].appendChild(it);
+                heights[shortest] += itemHeights[idx] + GAP;
+            });
+        }
+
+        function layoutAll() {
+            document.querySelectorAll('.js-masonry').forEach(layout);
+        }
+
+        // Сброс кэша разметки перед повторной раскладкой (после AJAX-подмены
+        // приходит свежий HTML без служебных полей).
+        function relayoutAll() {
+            document.querySelectorAll('.js-masonry').forEach(function (c) {
+                c._masonryItems = null;
+                c._masonryCols = null;
+                c._masonryLaidOut = false;
+            });
+            layoutAll();
+        }
+
+        window.boardMasonryRelayout = relayoutAll;
+
+        let resizeTimer = null;
+        window.addEventListener('resize', function () {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(layoutAll, 150);
+        });
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', layoutAll);
+        } else {
+            layoutAll();
+        }
+    })();
 
     // Живой поиск на доске без перезагрузки страницы.
     (function () {
@@ -113,20 +207,21 @@
                 // Применяем только самый свежий ответ.
                 if (myId !== reqId) return;
                 results.innerHTML = html;
+                if (window.boardMasonryRelayout) window.boardMasonryRelayout();
                 history.replaceState(null, '', url);
-            } catch (e) { /* abort/сеть — игнорируем */ }
+            } catch (e) { /* abort/сеть - игнорируем */ }
         }
 
-        // Ввод текста — с задержкой ~300мс.
+        // Ввод текста - с задержкой ~300мс.
         qInput.addEventListener('input', function () {
             clearTimeout(timer);
             timer = setTimeout(runSearch, 300);
         });
-        // Отметка вуза — сразу.
+        // Отметка вуза - сразу.
         form.addEventListener('change', function (e) {
             if (e.target && e.target.name === 'university') runSearch();
         });
-        // Кнопка «Найти» / Enter — без перезагрузки.
+        // Кнопка «Найти» / Enter - без перезагрузки.
         form.addEventListener('submit', function (e) {
             e.preventDefault();
             clearTimeout(timer);

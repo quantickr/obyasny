@@ -1,6 +1,6 @@
 from urllib.parse import quote
 
-from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.core.profanity import ProfanityError
@@ -308,7 +308,14 @@ async def public_profile(
 ):
     profile_user = await user_service.get_by_id(session, user_id)
     if profile_user is None:
-        raise HTTPException(status_code=404, detail="Пользователь не найден")
+        # Пользователь удалил аккаунт (или ссылка битая) - дружелюбная
+        # заглушка вместо технического 404.
+        return templates.TemplateResponse(
+            request,
+            "user_not_found.html",
+            {"user": user},
+            status_code=404,
+        )
 
     user_topics = await topic_service.get_user_topics(session, user_id)
     can_teach = [ut for ut in user_topics if ut.kind == TopicKind.can_teach]
